@@ -1,0 +1,38 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PatentData {
+    pub publication_number: Option<String>,
+    pub grant_number: Option<String>,
+    pub application_number: Option<String>,
+    pub applicant: Option<String>,
+    pub inventor: Option<String>,
+    pub filing_date: Option<String>,
+    pub priority_date: Option<String>,
+    pub publication_date: Option<String>,
+    pub grant_date: Option<String>,
+    pub legal_status: Option<String>,
+    pub ipc: Option<String>,
+    pub cpc: Option<String>,
+    pub title: Option<String>,
+    pub abstract_text: Option<String>,
+    pub claims_text: Option<String>,
+    pub description_text: Option<String>,
+    pub family_members: Option<Vec<FamilyMember>>,
+    pub source: InputSource,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FamilyMember {
+    pub country: String,
+    pub publication_number: String,
+    pub status: String,
+    pub theme_summary: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum InputSource {
+    Pdf,
+    Table,
+    Mixed,
+}
