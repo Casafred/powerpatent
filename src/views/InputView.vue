@@ -1,18 +1,30 @@
 <script setup lang="ts">
-// Step 1: 输入材料
+import FileDrop from '../components/input/FileDrop.vue'
+import PatentList from '../components/input/PatentList.vue'
+import { useInputStore } from '../stores/input'
+import { useRouter } from 'vue-router'
+
+const store = useInputStore()
+const router = useRouter()
+
+function goNext() {
+  router.push({ name: 'config' })
+}
 </script>
 
 <template>
   <div class="view-container">
     <h2>输入材料</h2>
-    <p class="view-desc">上传专利 PDF 或结构化表格文件</p>
+    <p class="view-desc">上传专利 PDF 或结构化表格文件，系统将自动识别并提取专利信息</p>
 
-    <div class="placeholder-card">
-      <el-empty description="文件上传区域（待实现）">
-        <template #image>
-          <el-icon :size="48" color="#c0c4cc"><Upload /></el-icon>
-        </template>
-      </el-empty>
+    <FileDrop />
+    <PatentList />
+
+    <div class="view-footer" v-if="store.patents.length > 0">
+      <el-button type="primary" @click="goNext">
+        下一步：模式与板块
+        <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+      </el-button>
     </div>
   </div>
 </template>
@@ -30,10 +42,9 @@
   margin-bottom: 20px;
 }
 
-.placeholder-card {
-  background: #fff;
-  border: 1px solid var(--app-border);
-  border-radius: 8px;
-  padding: 48px 24px;
+.view-footer {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

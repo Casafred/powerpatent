@@ -4,7 +4,7 @@
 import { useAIConfigStore } from '../stores/aiConfig'
 import type { AIProviderConfig, ProviderType } from '../types/ai'
 
-const PROVIDER_PRESETS: Record<ProviderType, { baseUrl: string; models: string[] }> = {
+export const PROVIDER_PRESETS: Record<ProviderType, { baseUrl: string; models: string[] }> = {
   deepseek: {
     baseUrl: 'https://api.deepseek.com',
     models: ['deepseek-chat', 'deepseek-v4-flash'],
