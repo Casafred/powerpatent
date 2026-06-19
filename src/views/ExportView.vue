@@ -6,6 +6,7 @@ import { useProjectStore } from '../stores/project'
 import { renderHtml, exportHtml } from '../services/tauri'
 import { useRouter } from 'vue-router'
 import { save } from '@tauri-apps/plugin-dialog'
+import { ElNotification } from 'element-plus'
 
 const inputStore = useInputStore()
 const configStore = useModuleConfigStore()
@@ -41,7 +42,7 @@ async function handlePreview() {
     })
     previewHtml.value = html
   } catch (e: any) {
-    console.error('预览失败', e)
+    ElNotification({ title: '预览失败', message: e?.toString() || '生成 HTML 预览时出错', type: 'error' })
   } finally {
     previewLoading.value = false
   }
@@ -64,9 +65,10 @@ async function handleExport() {
         embedPdf: embedPdf.value,
       })
       exporting.value = false
+      ElNotification({ title: '导出成功', message: `文件已保存到 ${filePath}`, type: 'success' })
     }
-  } catch (e) {
-    console.error('导出失败', e)
+  } catch (e: any) {
+    ElNotification({ title: '导出失败', message: e?.toString() || '导出 HTML 文件时出错', type: 'error' })
     exporting.value = false
   }
 }
@@ -150,13 +152,13 @@ function goBack() {
 }
 
 .view-desc {
-  color: #909399;
+  color: var(--app-text-secondary);
   font-size: 13px;
   margin-bottom: 20px;
 }
 
 .config-section {
-  background: #fff;
+  background: var(--app-card-bg);
   border: 1px solid var(--app-border);
   border-radius: 8px;
   padding: 16px;
@@ -187,7 +189,7 @@ function goBack() {
 }
 
 .summary-card {
-  background: #f5f7fa;
+  background: var(--app-module-bg);
   border-radius: 6px;
   padding: 10px;
 }
@@ -202,7 +204,7 @@ function goBack() {
   gap: 12px;
   margin-top: 4px;
   font-size: 12px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .preview-placeholder {

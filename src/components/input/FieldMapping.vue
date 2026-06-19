@@ -115,7 +115,7 @@ function handleConfirm() {
 }
 
 .mapping-desc {
-  color: #909399;
+  color: var(--app-text-secondary);
   font-size: 12px;
   margin-bottom: 12px;
 }
@@ -127,7 +127,7 @@ function handleConfirm() {
 
 .preview-cell {
   font-size: 12px;
-  color: #606266;
+  color: var(--app-text-secondary);
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;

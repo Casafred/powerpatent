@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useModuleConfigStore } from '../stores/moduleConfig'
+import { computed, ref } from 'vue'
+import { useModuleConfigStore, PRESETS, type PresetKey } from '../stores/moduleConfig'
 import { useInputStore } from '../stores/input'
 import { useRouter } from 'vue-router'
 import { MODULE_REGISTRY, type ModuleId, type ModuleLevel } from '../types/module'
@@ -27,6 +27,9 @@ const themeDescription = computed({
 const requiredModules = computed(() => MODULE_REGISTRY.filter(m => m.required))
 const extendedModules = computed(() => MODULE_REGISTRY.filter(m => !m.required))
 
+// 当前展开的逐篇配置专利 ID
+const expandedPatentId = ref<string | null>(null)
+
 function getModuleLevel(id: ModuleId): ModuleLevel {
   return (configStore.globalExtended[id] as ModuleLevel) ?? 'off'
 }
@@ -35,16 +38,20 @@ function setModuleLevel(id: ModuleId, level: ModuleLevel) {
   configStore.setModuleLevel(id, level)
 }
 
-function applyPreset(preset: 'quick' | 'standard' | 'deep') {
-  const presets: Record<string, Record<string, ModuleLevel>> = {
-    quick: { M5: 'lite', M6: 'lite', M7: 'lite', E1: 'off', E2: 'off', E3: 'off', E4: 'off', E5: 'off', E6: 'off', E7: 'off', E8: 'off' },
-    standard: { M5: 'full', M6: 'full', M7: 'full', E1: 'off', E2: 'full', E3: 'full', E4: 'off', E5: 'off', E6: 'off', E7: 'off', E8: 'off' },
-    deep: { M5: 'full', M6: 'full', M7: 'full', E1: 'full', E2: 'full', E3: 'full', E4: 'off', E5: 'off', E6: 'off', E7: 'off', E8: 'off' },
-  }
-  const p = presets[preset]
-  for (const [id, level] of Object.entries(p)) {
-    configStore.setModuleLevel(id, level)
-  }
+function applyPreset(key: PresetKey) {
+  configStore.applyPreset(key)
+}
+
+function getPatentLabel(patent: any, index: number): string {
+  return patent.title || patent.publicationNumber || patent.applicationNumber || `专利 ${index + 1}`
+}
+
+function getPatentId(patent: any): string {
+  return patent.publicationNumber || patent.applicationNumber || `patent-${Date.now()}`
+}
+
+function togglePatentExpand(patentId: string) {
+  expandedPatentId.value = expandedPatentId.value === patentId ? null : patentId
 }
 
 function goNext() {
@@ -86,10 +93,26 @@ function goBack() {
     <!-- 预设选择 -->
     <div class="config-section">
       <h3>快速预设</h3>
-      <div class="preset-buttons">
-        <el-button @click="applyPreset('quick')">快速概览</el-button>
-        <el-button type="primary" @click="applyPreset('standard')">标准解读</el-button>
-        <el-button @click="applyPreset('deep')">深度研读</el-button>
+      <div class="preset-cards">
+        <div
+          v-for="(preset, key) in PRESETS"
+          :key="key"
+          class="preset-card"
+          :class="{ active: configStore.activePreset === key }"
+          @click="applyPreset(key as PresetKey)"
+        >
+          <div class="preset-label">{{ preset.label }}</div>
+          <div class="preset-desc">{{ preset.desc }}</div>
+          <div class="preset-modules">
+            <span
+              v-for="mod in extendedModules"
+              :key="mod.id"
+              class="preset-dot"
+              :class="'level-' + preset.levels[mod.id]"
+              :title="mod.name + ': ' + preset.levels[mod.id]"
+            >{{ mod.id }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -132,18 +155,73 @@ function goBack() {
       </div>
     </div>
 
-    <!-- 专利列表概览 -->
+    <!-- 逐篇板块配置 -->
     <div v-if="inputStore.patents.length > 0" class="config-section">
-      <h3>已输入专利（{{ inputStore.patents.length }} 篇）</h3>
-      <div class="patent-chips">
-        <el-tag
-          v-for="(p, i) in inputStore.patents"
-          :key="i"
-          closable
-          @close="inputStore.removePatent(i)"
+      <h3>逐篇板块配置</h3>
+      <p class="section-hint">点击专利名称展开，可为每篇专利单独设置板块级别（覆盖全局设置）</p>
+      <div class="patent-config-list">
+        <div
+          v-for="(patent, index) in inputStore.patents"
+          :key="index"
+          class="patent-config-item"
         >
-          {{ p.title || p.publicationNumber || `专利 ${i + 1}` }}
-        </el-tag>
+          <div
+            class="patent-config-header"
+            @click="togglePatentExpand(getPatentId(patent))"
+          >
+            <span class="patent-config-name">{{ getPatentLabel(patent, index) }}</span>
+            <span v-if="patent.publicationNumber" class="patent-config-id">{{ patent.publicationNumber }}</span>
+            <div class="patent-config-right">
+              <el-tag
+                v-if="configStore.patentOverrides[getPatentId(patent)]"
+                type="warning"
+                size="small"
+              >已自定义</el-tag>
+              <el-icon :class="{ rotated: expandedPatentId === getPatentId(patent) }">
+                <ArrowDown />
+              </el-icon>
+            </div>
+          </div>
+
+          <!-- 展开的逐篇配置 -->
+          <div v-if="expandedPatentId === getPatentId(patent)" class="patent-config-body">
+            <div v-if="mode === 'multi'" class="patent-key-toggle">
+              <el-checkbox
+                :model-value="configStore.patentOverrides[getPatentId(patent)]?.isKey ?? false"
+                @update:model-value="(v: boolean) => configStore.setKeyPatent(getPatentId(patent), v)"
+              >
+                标记为关键专利
+              </el-checkbox>
+            </div>
+            <div class="patent-module-grid">
+              <div
+                v-for="mod in extendedModules.filter(m => m.aiGenerated)"
+                :key="mod.id"
+                class="patent-module-row"
+              >
+                <span class="patent-module-name">{{ mod.id }} {{ mod.name }}</span>
+                <el-radio-group
+                  :model-value="configStore.getEffectiveLevel(getPatentId(patent), mod.id)"
+                  @update:model-value="(v: any) => configStore.setPatentModuleLevel(getPatentId(patent), mod.id, v)"
+                  size="small"
+                >
+                  <el-radio-button value="full">Full</el-radio-button>
+                  <el-radio-button value="lite">Lite</el-radio-button>
+                  <el-radio-button value="off">Off</el-radio-button>
+                </el-radio-group>
+              </div>
+            </div>
+            <div class="patent-config-actions">
+              <el-button
+                size="small"
+                text
+                @click="configStore.clearPatentOverride(getPatentId(patent))"
+              >
+                重置为全局设置
+              </el-button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -166,13 +244,13 @@ function goBack() {
 }
 
 .view-desc {
-  color: #909399;
+  color: var(--app-text-secondary);
   font-size: 13px;
   margin-bottom: 20px;
 }
 
 .config-section {
-  background: #fff;
+  background: var(--app-card-bg);
   border: 1px solid var(--app-border);
   border-radius: 8px;
   padding: 16px;
@@ -185,11 +263,78 @@ function goBack() {
   margin-bottom: 12px;
 }
 
-.preset-buttons {
-  display: flex;
-  gap: 8px;
+.section-hint {
+  font-size: 12px;
+  color: var(--app-text-secondary);
+  margin-bottom: 12px;
 }
 
+/* 预设卡片 */
+.preset-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.preset-card {
+  background: var(--app-module-bg);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.preset-card:hover {
+  background: var(--app-hover-bg);
+}
+
+.preset-card.active {
+  border-color: #409eff;
+  background: var(--app-active-bg);
+}
+
+.preset-label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.preset-desc {
+  font-size: 12px;
+  color: var(--app-text-secondary);
+  margin-bottom: 10px;
+}
+
+.preset-modules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.preset-dot {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.preset-dot.level-full {
+  background: #409eff;
+  color: #fff;
+}
+
+.preset-dot.level-lite {
+  background: #e6a23c;
+  color: #fff;
+}
+
+.preset-dot.level-off {
+  background: var(--app-hover-bg);
+  color: var(--app-text-secondary);
+}
+
+/* 板块网格 */
 .module-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -197,7 +342,7 @@ function goBack() {
 }
 
 .module-card {
-  background: #f5f7fa;
+  background: var(--app-module-bg);
   border-radius: 6px;
   padding: 12px;
   display: flex;
@@ -206,7 +351,7 @@ function goBack() {
 }
 
 .module-card.required {
-  background: #f0f9eb;
+  background: var(--app-module-required-bg);
 }
 
 .module-header {
@@ -231,13 +376,97 @@ function goBack() {
 
 .module-desc {
   font-size: 12px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
-.patent-chips {
+/* 逐篇配置 */
+.patent-config-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 6px;
+}
+
+.patent-config-item {
+  background: var(--app-module-bg);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.patent-config-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.patent-config-header:hover {
+  background: var(--app-hover-bg);
+}
+
+.patent-config-name {
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.patent-config-id {
+  font-size: 11px;
+  color: var(--app-text-secondary);
+}
+
+.patent-config-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.patent-config-right .el-icon {
+  transition: transform 0.2s;
+  font-size: 12px;
+  color: var(--app-text-secondary);
+}
+
+.patent-config-right .el-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.patent-config-body {
+  padding: 0 12px 12px;
+  border-top: 1px solid var(--app-border);
+}
+
+.patent-key-toggle {
+  padding: 8px 0 4px;
+}
+
+.patent-module-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.patent-module-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.patent-module-name {
+  font-size: 12px;
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+}
+
+.patent-config-actions {
+  padding-top: 8px;
+  text-align: right;
 }
 
 .view-footer {

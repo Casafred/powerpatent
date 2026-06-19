@@ -6,7 +6,9 @@ import { useAIConfigStore } from '../stores/aiConfig'
 import { useProjectStore } from '../stores/project'
 import { generateModule, getCachedModule, rerunModule } from '../services/tauri'
 import { MODULE_REGISTRY, type ModuleId, type ModuleLevel } from '../types/module'
+import AnnotationPanel from '../components/annotation/AnnotationPanel.vue'
 import { useRouter } from 'vue-router'
+import { ElNotification } from 'element-plus'
 
 const inputStore = useInputStore()
 const configStore = useModuleConfigStore()
@@ -60,6 +62,13 @@ function initModuleStates() {
 // 生成所有板块
 async function generateAll() {
   if (inputStore.patents.length === 0) {
+    ElNotification({ title: '无法生成', message: '请先在"输入材料"步骤添加专利', type: 'warning' })
+    return
+  }
+
+  if (!aiConfigStore.config.analysis.apiKey) {
+    ElNotification({ title: '缺少 API Key', message: '请先在"AI 配置"步骤设置 API Key', type: 'warning' })
+    router.push({ name: 'ai' })
     return
   }
 
@@ -67,6 +76,7 @@ async function generateAll() {
   generating.value = true
 
   const provider = aiConfigStore.config.analysis
+  let errorCount = 0
 
   for (const patent of inputStore.patents) {
     const patentId = patent.publicationNumber || patent.applicationNumber || 'unknown'
@@ -112,12 +122,23 @@ async function generateAll() {
       } catch (e: any) {
         mod.status = 'error'
         mod.error = e?.toString() || '生成失败'
+        errorCount++
       }
     }
   }
 
   generating.value = false
   currentModule.value = null
+
+  if (errorCount > 0) {
+    ElNotification({
+      title: '生成完成（部分失败）',
+      message: `${errorCount} 个板块生成失败，可点击"重跑"重试`,
+      type: 'warning',
+    })
+  } else if (moduleStates.value.length > 0) {
+    ElNotification({ title: '生成完成', message: '所有板块已成功生成', type: 'success' })
+  }
 }
 
 // 重跑单个板块
@@ -151,6 +172,7 @@ async function rerun(index: number) {
   } catch (e: any) {
     mod.status = 'error'
     mod.error = e?.toString() || '重跑失败'
+    ElNotification({ title: '重跑失败', message: mod.error, type: 'error' })
   }
 }
 
@@ -188,30 +210,33 @@ function goBack() {
     <h2>生成与重跑</h2>
     <p class="view-desc">AI 逐板块生成解读内容，支持板块级重跑</p>
 
-    <!-- 专利概览 -->
-    <div v-if="inputStore.patents.length > 0" class="info-bar">
-      <el-tag type="info">{{ inputStore.patents.length }} 篇专利</el-tag>
-      <el-tag type="info">{{ modulesToGenerate.length }} 个 AI 板块</el-tag>
-    </div>
-
-    <!-- 生成按钮 -->
-    <div class="action-bar" v-if="moduleStates.length === 0">
+    <!-- 空状态：未开始生成 -->
+    <div v-if="moduleStates.length === 0" class="empty-state">
+      <el-icon :size="48" color="var(--app-text-placeholder)"><VideoPlay /></el-icon>
+      <p class="empty-title">准备生成</p>
+      <p class="empty-desc">
+        {{ inputStore.patents.length === 0
+          ? '请先在"输入材料"步骤添加专利'
+          : modulesToGenerate.length === 0
+            ? '当前无 AI 板块需要生成，请检查板块配置'
+            : `${inputStore.patents.length} 篇专利 × ${modulesToGenerate.length} 个板块`
+        }}
+      </p>
       <el-button
         type="primary"
         size="large"
-        :disabled="inputStore.patents.length === 0"
+        :disabled="inputStore.patents.length === 0 || modulesToGenerate.length === 0"
         @click="generateAll"
       >
         <el-icon><VideoPlay /></el-icon>
         开始生成
       </el-button>
-      <p v-if="inputStore.patents.length === 0" class="hint">请先在"输入材料"步骤添加专利</p>
     </div>
 
     <!-- 生成进度面板 -->
     <div v-if="moduleStates.length > 0" class="progress-panel">
       <div class="progress-header">
-        <span>生成进度</span>
+        <span>生成进度（{{ moduleStates.filter(m => m.status === 'done' || m.status === 'cached').length }}/{{ moduleStates.length }}）</span>
         <el-button v-if="!generating" type="primary" size="small" @click="generateAll">
           重新生成全部
         </el-button>
@@ -257,6 +282,14 @@ function goBack() {
           <div v-if="mod.output && (mod.status === 'done' || mod.status === 'cached')" class="module-output">
             <pre>{{ JSON.stringify(mod.output, null, 2).slice(0, 300) }}{{ JSON.stringify(mod.output, null, 2).length > 300 ? '...' : '' }}</pre>
           </div>
+
+          <!-- 批注面板 -->
+          <div v-if="mod.status === 'done' || mod.status === 'cached'" class="module-annotation">
+            <AnnotationPanel
+              :patent-id="inputStore.patents[0]?.publicationNumber || inputStore.patents[0]?.applicationNumber || 'unknown'"
+              :module-id="mod.id"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -284,30 +317,36 @@ function goBack() {
 }
 
 .view-desc {
-  color: #909399;
+  color: var(--app-text-secondary);
   font-size: 13px;
   margin-bottom: 20px;
 }
 
-.info-bar {
-  display: flex;
-  gap: 8px;
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 48px 0;
+  background: var(--app-card-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+}
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 500;
+  margin-top: 12px;
+  color: var(--app-text);
+}
+
+.empty-desc {
+  color: var(--app-text-secondary);
+  font-size: 13px;
+  margin-top: 4px;
   margin-bottom: 16px;
 }
 
-.action-bar {
-  text-align: center;
-  padding: 48px 0;
-}
-
-.hint {
-  color: #909399;
-  font-size: 12px;
-  margin-top: 8px;
-}
-
 .progress-panel {
-  background: #fff;
+  background: var(--app-card-bg);
   border: 1px solid var(--app-border);
   border-radius: 8px;
   padding: 16px;
@@ -330,14 +369,14 @@ function goBack() {
 
 .module-item {
   padding: 12px;
-  background: #f5f7fa;
+  background: var(--app-module-bg);
   border-radius: 6px;
   border-left: 3px solid transparent;
 }
 
 .module-item.active {
   border-left-color: #409eff;
-  background: #ecf5ff;
+  background: var(--app-active-bg);
 }
 
 .module-info {
@@ -369,8 +408,8 @@ function goBack() {
 
 .model-tag {
   font-size: 11px;
-  color: #909399;
-  background: #f0f0f0;
+  color: var(--app-text-secondary);
+  background: var(--app-hover-bg);
   padding: 1px 6px;
   border-radius: 3px;
 }
@@ -387,8 +426,8 @@ function goBack() {
 
 .module-output {
   margin-top: 8px;
-  background: #fafafa;
-  border: 1px solid #eee;
+  background: var(--app-code-bg);
+  border: 1px solid var(--app-border);
   border-radius: 4px;
   padding: 8px;
   max-height: 120px;
@@ -397,9 +436,13 @@ function goBack() {
 
 .module-output pre {
   font-size: 11px;
-  color: #606266;
+  color: var(--app-text-secondary);
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+.module-annotation {
+  margin-top: 8px;
 }
 
 .view-footer {

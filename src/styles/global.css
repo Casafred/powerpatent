@@ -15,12 +15,113 @@ body,
   font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s, color 0.3s;
 }
 
-/* CSS 变量 */
+/* 浅色主题 */
 :root {
   --app-header-height: 40px;
   --app-sidebar-width: 220px;
   --app-bg: #f5f7fa;
   --app-border: #e4e7ed;
+  --app-card-bg: #ffffff;
+  --app-text: #303133;
+  --app-text-secondary: #909399;
+  --app-text-placeholder: #c0c4cc;
+  --app-hover-bg: #f5f7fa;
+  --app-active-bg: #ecf5ff;
+  --app-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --app-header-bg: #1d1e1f;
+  --app-header-text: #ffffff;
+  --app-sidebar-bg: #ffffff;
+  --app-sidebar-active: #ecf5ff;
+  --app-sidebar-active-text: #409eff;
+  --app-sidebar-done: #67c23a;
+  --app-dropzone-bg: #fafafa;
+  --app-dropzone-border: #dcdfe6;
+  --app-dropzone-hover: #ecf5ff;
+  --app-module-bg: #f5f7fa;
+  --app-module-required-bg: #f0f9eb;
+  --app-code-bg: #fafafa;
+}
+
+/* 深色主题 */
+html.dark {
+  --app-bg: #1a1a2e;
+  --app-border: #363648;
+  --app-card-bg: #252540;
+  --app-text: #e0e0e8;
+  --app-text-secondary: #9898a8;
+  --app-text-placeholder: #6a6a7a;
+  --app-hover-bg: #2a2a48;
+  --app-active-bg: #1a3a5c;
+  --app-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  --app-header-bg: #12121f;
+  --app-header-text: #e0e0e8;
+  --app-sidebar-bg: #1e1e35;
+  --app-sidebar-active: #1a3a5c;
+  --app-sidebar-active-text: #66b1ff;
+  --app-sidebar-done: #85ce61;
+  --app-dropzone-bg: #252540;
+  --app-dropzone-border: #363648;
+  --app-dropzone-hover: #1a3a5c;
+  --app-module-bg: #252540;
+  --app-module-required-bg: #1e3520;
+  --app-code-bg: #1e1e35;
+}
+
+/* Element Plus 深色模式覆盖 */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark .el-card {
+  --el-card-bg-color: var(--app-card-bg);
+  --el-card-border-color: var(--app-border);
+}
+
+html.dark .el-table {
+  --el-table-bg-color: var(--app-card-bg);
+  --el-table-tr-bg-color: var(--app-card-bg);
+  --el-table-header-bg-color: var(--app-module-bg);
+  --el-table-row-hover-bg-color: var(--app-hover-bg);
+  --el-table-border-color: var(--app-border);
+}
+
+html.dark .el-input__wrapper,
+html.dark .el-textarea__inner,
+html.dark .el-select__wrapper {
+  background-color: var(--app-module-bg) !important;
+  box-shadow: 0 0 0 1px var(--app-border) inset !important;
+}
+
+html.dark .el-form-item__label {
+  color: var(--app-text-secondary);
+}
+
+html.dark .el-empty__description p {
+  color: var(--app-text-secondary);
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 3px;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #4a4a5a;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #909399;
 }

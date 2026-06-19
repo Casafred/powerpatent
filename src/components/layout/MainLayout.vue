@@ -38,6 +38,9 @@ function goToStep(step: number) {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  background: var(--app-bg);
+  color: var(--app-text);
+  transition: background-color 0.3s, color 0.3s;
 }
 
 .app-body {
@@ -51,5 +54,6 @@ function goToStep(step: number) {
   overflow-y: auto;
   padding: 24px 32px;
   background: var(--app-bg);
+  transition: background-color 0.3s;
 }
 </style>

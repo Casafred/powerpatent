@@ -54,7 +54,7 @@ function getStatusTag(status?: string) {
 }
 
 .patent-card {
-  background: #f5f7fa;
+  background: var(--app-module-bg);
   border-radius: 6px;
   padding: 12px;
 }
@@ -79,7 +79,7 @@ function getStatusTag(status?: string) {
   gap: 12px;
   margin-top: 6px;
   font-size: 12px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .patent-source {

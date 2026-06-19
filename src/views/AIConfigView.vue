@@ -4,6 +4,7 @@ import { useAIConfigStore } from '../stores/aiConfig'
 import { useRouter } from 'vue-router'
 import type { ProviderType } from '../types/ai'
 import { PROVIDER_PRESETS as providerPresets } from '../services/ai'
+import { ElNotification } from 'element-plus'
 
 const store = useAIConfigStore()
 const router = useRouter()
@@ -29,6 +30,10 @@ function onProviderTypeChange(target: 'analysis' | 'translate', type: ProviderTy
 }
 
 function goNext() {
+  if (!store.config.analysis.apiKey) {
+    ElNotification({ title: '缺少 API Key', message: '请设置分析模型的 API Key', type: 'warning' })
+    return
+  }
   router.push({ name: 'generate' })
 }
 
@@ -122,13 +127,13 @@ function goBack() {
 }
 
 .view-desc {
-  color: #909399;
+  color: var(--app-text-secondary);
   font-size: 13px;
   margin-bottom: 20px;
 }
 
 .config-section {
-  background: #fff;
+  background: var(--app-card-bg);
   border: 1px solid var(--app-border);
   border-radius: 8px;
   padding: 16px;

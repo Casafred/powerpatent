@@ -37,7 +37,7 @@ function goNext() {
 }
 
 .view-desc {
-  color: #909399;
+  color: var(--app-text-secondary);
   font-size: 13px;
   margin-bottom: 20px;
 }

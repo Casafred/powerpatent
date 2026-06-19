@@ -137,7 +137,7 @@ defineExpose({ files, hasFiles, getInputSource })
       @dragleave="handleDragLeave"
       @click="openFileDialog"
     >
-      <el-icon :size="40" color="#c0c4cc"><UploadFilled /></el-icon>
+      <el-icon :size="40" color="var(--app-text-placeholder)"><UploadFilled /></el-icon>
       <p class="drop-text">拖拽文件到此处，或点击选择文件</p>
       <p class="drop-hint">支持 PDF、XLSX、XLS、CSV 格式</p>
     </div>
@@ -195,39 +195,40 @@ defineExpose({ files, hasFiles, getInputSource })
 }
 
 .drop-zone {
-  border: 2px dashed #dcdfe6;
+  border: 2px dashed var(--app-dropzone-border);
   border-radius: 8px;
   padding: 40px 24px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
-  background: #fafafa;
+  background: var(--app-dropzone-bg);
 }
 
 .drop-zone:hover {
   border-color: #409eff;
-  background: #ecf5ff;
+  background: var(--app-dropzone-hover);
 }
 
 .drop-zone.dragging {
   border-color: #409eff;
-  background: #ecf5ff;
+  background: var(--app-dropzone-hover);
+  transform: scale(1.01);
 }
 
 .drop-text {
   margin-top: 8px;
-  color: #606266;
+  color: var(--app-text-secondary);
   font-size: 14px;
 }
 
 .drop-hint {
   margin-top: 4px;
-  color: #c0c4cc;
+  color: var(--app-text-placeholder);
   font-size: 12px;
 }
 
 .file-list-section {
-  background: #fff;
+  background: var(--app-card-bg);
   border: 1px solid var(--app-border);
   border-radius: 8px;
   padding: 16px;
@@ -239,7 +240,7 @@ defineExpose({ files, hasFiles, getInputSource })
   align-items: center;
   margin-bottom: 12px;
   font-size: 13px;
-  color: #606266;
+  color: var(--app-text-secondary);
 }
 
 .file-list {
@@ -253,7 +254,7 @@ defineExpose({ files, hasFiles, getInputSource })
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #f5f7fa;
+  background: var(--app-module-bg);
   border-radius: 6px;
 }
 

@@ -48,12 +48,13 @@ const maxReachedStep = computed(() => props.currentStep)
 <style scoped>
 .step-nav {
   width: var(--app-sidebar-width);
-  background: #fff;
+  background: var(--app-sidebar-bg);
   border-right: 1px solid var(--app-border);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   user-select: none;
+  transition: background-color 0.3s;
 }
 
 .step-nav-inner {
@@ -68,9 +69,10 @@ const maxReachedStep = computed(() => props.currentStep)
   gap: 10px;
   padding: 10px 20px;
   cursor: default;
-  color: #a8abb2;
+  color: var(--app-text-placeholder);
   font-size: 13px;
   position: relative;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .step-item.clickable {
@@ -78,25 +80,25 @@ const maxReachedStep = computed(() => props.currentStep)
 }
 
 .step-item.clickable:hover {
-  background: #f5f7fa;
-  color: #606266;
+  background: var(--app-hover-bg);
+  color: var(--app-text-secondary);
 }
 
 .step-item.active {
-  background: #ecf5ff;
-  color: #409eff;
+  background: var(--app-sidebar-active);
+  color: var(--app-sidebar-active-text);
   font-weight: 500;
 }
 
 .step-item.done {
-  color: #67c23a;
+  color: var(--app-sidebar-done);
 }
 
 .step-indicator {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 2px solid #dcdfe6;
+  border: 2px solid var(--app-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -107,14 +109,14 @@ const maxReachedStep = computed(() => props.currentStep)
 }
 
 .step-item.active .step-indicator {
-  border-color: #409eff;
-  background: #409eff;
+  border-color: var(--app-sidebar-active-text);
+  background: var(--app-sidebar-active-text);
   color: #fff;
 }
 
 .step-item.done .step-indicator {
-  border-color: #67c23a;
-  background: #67c23a;
+  border-color: var(--app-sidebar-done);
+  background: var(--app-sidebar-done);
   color: #fff;
 }
 
@@ -136,10 +138,11 @@ const maxReachedStep = computed(() => props.currentStep)
   top: 34px;
   width: 2px;
   height: 24px;
-  background: #dcdfe6;
+  background: var(--app-border);
+  transition: background-color 0.2s;
 }
 
 .step-line.done {
-  background: #67c23a;
+  background: var(--app-sidebar-done);
 }
 </style>
