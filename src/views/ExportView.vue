@@ -119,7 +119,7 @@ function goBack() {
         <iframe :srcdoc="previewHtml" class="preview-iframe" sandbox="allow-same-origin" />
       </div>
       <div v-else class="preview-placeholder">
-        <el-empty description="点击"生成预览"查看输出效果" />
+        <el-empty description="点击「生成预览」查看输出效果" />
       </div>
     </div>
 
