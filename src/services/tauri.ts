@@ -114,17 +114,67 @@ export async function exportHtml(params: {
   })
 }
 
-/** 测试 AI 连接 */
+/** 测试 AI 连接（浏览器中直接 fetch，Tauri 中走后端） */
 export async function testAiConnection(params: {
   providerType: string
   apiKey: string
   baseUrl: string
   model: string
 }): Promise<{ success: boolean; message: string; latency?: number }> {
+  if (!isTauri) {
+    // 浏览器环境：直接 fetch（无 CSP 限制）
+    return testAiConnectionFetch(params)
+  }
   return safeInvoke('test_ai_connection', {
     provider_type: params.providerType,
     api_key: params.apiKey,
     base_url: params.baseUrl,
     model: params.model,
   })
+}
+
+/** 浏览器端直接 fetch 测试连接 */
+async function testAiConnectionFetch(params: {
+  providerType: string
+  apiKey: string
+  baseUrl: string
+  model: string
+}): Promise<{ success: boolean; message: string; latency?: number }> {
+  if (!params.apiKey) {
+    return { success: false, message: '请先输入 API Key' }
+  }
+
+  let base = params.baseUrl.replace(/\/+$/, '')
+  if (params.providerType === 'zhipu') {
+    if (!base.endsWith('/v4')) base += '/v4'
+  } else {
+    if (!base.endsWith('/v1')) base += '/v1'
+  }
+  const url = `${base}/chat/completions`
+
+  const start = performance.now()
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${params.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: params.model,
+        messages: [{ role: 'user', content: 'Hi' }],
+        max_tokens: 5,
+        stream: false,
+      }),
+    })
+    const latency = Math.round(performance.now() - start)
+    if (response.ok) {
+      return { success: true, message: `连接成功 (${latency}ms)`, latency }
+    }
+    const errorText = await response.text()
+    return { success: false, message: `HTTP ${response.status}: ${errorText.slice(0, 200)}`, latency }
+  } catch (err) {
+    const latency = Math.round(performance.now() - start)
+    return { success: false, message: `网络错误: ${(err as Error).message}`, latency }
+  }
 }
