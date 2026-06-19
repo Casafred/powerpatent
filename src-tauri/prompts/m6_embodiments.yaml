@@ -1,0 +1,60 @@
+id: m6_embodiments
+name: 实施例归纳
+description: 归纳专利中各实施例的技术方案和参数
+model_hint: strong
+temperature: 0.2
+input_fields:
+  - description_text
+  - claims_text
+output_schema:
+  type: object
+  properties:
+    embodiments:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          solution:
+            type: string
+          key_parameters:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                value:
+                  type: string
+          advantages:
+            type: string
+prompt_template: |
+  你是一位资深专利分析师。请从以下说明书中归纳各实施例的技术方案。
+
+  ## 说明书
+
+  {{description_text}}
+
+  ## 权利要求书（参考）
+
+  {{claims_text}}
+
+  ## 输出要求
+
+  请严格按以下 JSON 格式输出：
+
+  ```json
+  {
+    "embodiments": [
+      {
+        "name": "实施例1",
+        "solution": "该实施例的技术方案概述",
+        "key_parameters": [
+          { "name": "参数名", "value": "参数值或范围" }
+        ],
+        "advantages": "该实施例的技术优势"
+      }
+    ]
+  }
+  ```

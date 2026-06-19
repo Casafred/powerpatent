@@ -1,0 +1,53 @@
+id: m4_summary
+name: 一句话概要
+description: 生成专利的一句话概要，包含技术问题、技术手段和技术效果
+model_hint: strong
+temperature: 0.3
+input_fields:
+  - title
+  - abstract_text
+  - claims_text
+  - description_text
+output_schema:
+  type: object
+  properties:
+    technical_problem:
+      type: string
+      description: 该专利要解决的技术问题
+    technical_means:
+      type: string
+      description: 解决该问题的核心技术手段
+    technical_effect:
+      type: string
+      description: 该技术手段带来的技术效果
+    one_line_summary:
+      type: string
+      description: 一句话概要
+prompt_template: |
+  你是一位资深专利分析师。请根据以下专利信息，生成结构化的一句话概要。
+
+  ## 专利信息
+
+  **标题**: {{title}}
+
+  **摘要**:
+  {{abstract_text}}
+
+  **权利要求**:
+  {{claims_text}}
+
+  **说明书**:
+  {{description_text}}
+
+  ## 输出要求
+
+  请严格按以下 JSON 格式输出，不要输出任何其他内容：
+
+  ```json
+  {
+    "technical_problem": "该专利要解决的技术问题（一句话）",
+    "technical_means": "解决该问题的核心技术手段（一句话）",
+    "technical_effect": "该技术手段带来的技术效果（一句话）",
+    "one_line_summary": "一句话概要：为了解决[问题]，采用[手段]，实现了[效果]"
+  }
+  ```

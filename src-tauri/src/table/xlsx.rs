@@ -1,5 +1,5 @@
 use anyhow::Result;
-use calamine::{open_workbook, Reader, Xlsx, DataType};
+use calamine::{open_workbook, Reader, Xlsx};
 use std::path::Path;
 
 /// 解析 XLSX 文件，返回所有工作表的数据

@@ -1,5 +1,4 @@
 use anyhow::Result;
-use std::path::Path;
 
 // PDF 图像抽取 - TODO: 需要集成 mupdf 或 pdf-render crate
 // 当前阶段先返回空结果，后续 Phase 2.5 实现

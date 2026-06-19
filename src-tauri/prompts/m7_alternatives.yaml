@@ -1,0 +1,50 @@
+id: m7_alternatives
+name: 其他揭示方案
+description: 提取说明书中提到但未写入权利要求的替代方案
+model_hint: strong
+temperature: 0.3
+input_fields:
+  - description_text
+  - claims_text
+output_schema:
+  type: object
+  properties:
+    alternatives:
+      type: array
+      items:
+        type: object
+        properties:
+          description:
+            type: string
+          related_claims:
+            type: array
+            items:
+              type: integer
+          potential_scope:
+            type: string
+prompt_template: |
+  你是一位资深专利分析师。请从以下说明书中提取未写入权利要求的替代技术方案。
+
+  ## 说明书
+
+  {{description_text}}
+
+  ## 权利要求书
+
+  {{claims_text}}
+
+  ## 输出要求
+
+  请严格按以下 JSON 格式输出：
+
+  ```json
+  {
+    "alternatives": [
+      {
+        "description": "说明书中提到的替代方案描述",
+        "related_claims": [1, 2],
+        "potential_scope": "如果将此替代方案加入权利要求，可能扩展的保护范围"
+      }
+    ]
+  }
+  ```

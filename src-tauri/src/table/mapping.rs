@@ -69,7 +69,7 @@ pub fn auto_map_columns(headers: &[String]) -> HashMap<usize, String> {
 /// 根据映射将表格行转为 PatentData
 pub fn row_to_patent_data(
     row: &[String],
-    headers: &[String],
+    _headers: &[String],
     column_mapping: &HashMap<usize, String>,
 ) -> PatentData {
     let mut data = PatentData {

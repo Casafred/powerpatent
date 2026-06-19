@@ -1,0 +1,46 @@
+id: m3_family
+name: 同族保护情况
+description: 概要分析同族专利的保护情况
+model_hint: fast
+temperature: 0.3
+input_fields:
+  - family_data
+output_schema:
+  type: object
+  properties:
+    family_overview:
+      type: string
+    key_jurisdictions:
+      type: array
+      items:
+        type: object
+        properties:
+          country:
+            type: string
+          status:
+            type: string
+          scope_difference:
+            type: string
+prompt_template: |
+  你是一位资深专利分析师。请根据以下同族专利数据，概要分析同族保护情况。
+
+  ## 同族数据
+
+  {{family_data}}
+
+  ## 输出要求
+
+  请严格按以下 JSON 格式输出：
+
+  ```json
+  {
+    "family_overview": "同族整体保护策略概述",
+    "key_jurisdictions": [
+      {
+        "country": "国家/地区",
+        "status": "授权/审查中/失效",
+        "scope_difference": "与优先权申请的权利要求范围差异（如有）"
+      }
+    ]
+  }
+  ```

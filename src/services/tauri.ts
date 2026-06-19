@@ -1,11 +1,10 @@
 /**
  * Tauri IPC 调用封装
- * 统一管理所有前后端通信
  */
 import { invoke } from '@tauri-apps/api/core'
 
 /** 输入处理 */
-export async function processInput(files: string[]): Promise<any> {
+export async function processInput(files: string[]): Promise<any[]> {
   return invoke('process_input', { files })
 }
 
@@ -20,7 +19,7 @@ export async function extractPdfImages(pdfPath: string): Promise<any> {
 }
 
 /** 字段映射 */
-export async function mapFields(tablePath: string, mapping: any): Promise<any> {
+export async function mapFields(tablePath: string, mapping: Record<number, string>): Promise<any> {
   return invoke('map_fields', { tablePath, mapping })
 }
 
@@ -36,8 +35,16 @@ export async function generateModule(params: {
   moduleId: string
   level: string
   provider: any
+  patentData: any
 }): Promise<any> {
-  return invoke('generate_module', params)
+  return invoke('generate_module', {
+    project_id: params.projectId,
+    patent_id: params.patentId,
+    module_id: params.moduleId,
+    level: params.level,
+    provider: params.provider,
+    patent_data: params.patentData,
+  })
 }
 
 /** 缓存查询 */
@@ -46,7 +53,11 @@ export async function getCachedModule(params: {
   patentId: string
   moduleId: string
 }): Promise<any> {
-  return invoke('get_cached_module', params)
+  return invoke('get_cached_module', {
+    project_id: params.projectId,
+    patent_id: params.patentId,
+    module_id: params.moduleId,
+  })
 }
 
 /** 板块重跑 */
@@ -56,7 +67,12 @@ export async function rerunModule(params: {
   moduleId: string
   options: any
 }): Promise<any> {
-  return invoke('rerun_module', params)
+  return invoke('rerun_module', {
+    project_id: params.projectId,
+    patent_id: params.patentId,
+    module_id: params.moduleId,
+    options: params.options,
+  })
 }
 
 /** HTML 渲染导出 */
@@ -65,7 +81,11 @@ export async function renderHtml(params: {
   moduleConfig: any
   embedPdf: boolean
 }): Promise<string> {
-  return invoke('render_html', params)
+  return invoke('render_html', {
+    project_id: params.projectId,
+    module_config: params.moduleConfig,
+    embed_pdf: params.embedPdf,
+  })
 }
 
 /** 导出 HTML 文件 */
@@ -75,5 +95,10 @@ export async function exportHtml(params: {
   moduleConfig: any
   embedPdf: boolean
 }): Promise<void> {
-  return invoke('export_html', params)
+  return invoke('export_html', {
+    project_id: params.projectId,
+    output_path: params.outputPath,
+    module_config: params.moduleConfig,
+    embed_pdf: params.embedPdf,
+  })
 }
