@@ -1,19 +1,53 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useInputStore } from '../stores/input'
+import { useModuleConfigStore } from '../stores/moduleConfig'
 import { useProjectStore } from '../stores/project'
+import { renderHtml, exportHtml } from '../services/tauri'
 import { useRouter } from 'vue-router'
 import { save } from '@tauri-apps/plugin-dialog'
 
 const inputStore = useInputStore()
+const configStore = useModuleConfigStore()
 const projectStore = useProjectStore()
 const router = useRouter()
 
 const embedPdf = ref(true)
 const exporting = ref(false)
+const previewHtml = ref('')
+const previewLoading = ref(false)
 
 const hasPatents = computed(() => inputStore.patents.length > 0)
 
+// 构建渲染配置
+function buildModuleConfig() {
+  return {
+    mode: configStore.mode,
+    theme_name: configStore.themeName || null,
+    theme_description: configStore.themeDescription || null,
+    patents: inputStore.patents,
+  }
+}
+
+// 预览 HTML
+async function handlePreview() {
+  if (!hasPatents.value) return
+  previewLoading.value = true
+  try {
+    const html = await renderHtml({
+      projectId: projectStore.projectId,
+      moduleConfig: buildModuleConfig(),
+      embedPdf: embedPdf.value,
+    })
+    previewHtml.value = html
+  } catch (e: any) {
+    console.error('预览失败', e)
+  } finally {
+    previewLoading.value = false
+  }
+}
+
+// 导出 HTML 文件
 async function handleExport() {
   try {
     const filePath = await save({
@@ -23,11 +57,17 @@ async function handleExport() {
 
     if (filePath) {
       exporting.value = true
-      // TODO: Phase 4 - 调用 render_html + export_html
+      await exportHtml({
+        projectId: projectStore.projectId,
+        outputPath: filePath,
+        moduleConfig: buildModuleConfig(),
+        embedPdf: embedPdf.value,
+      })
       exporting.value = false
     }
   } catch (e) {
     console.error('导出失败', e)
+    exporting.value = false
   }
 }
 
@@ -67,13 +107,17 @@ function goBack() {
 
     <!-- 预览区域 -->
     <div class="config-section">
-      <h3>HTML 预览</h3>
-      <div class="preview-placeholder">
-        <el-empty description="预览功能将在 Phase 4 实现">
-          <template #image>
-            <el-icon :size="48" color="#c0c4cc"><Monitor /></el-icon>
-          </template>
-        </el-empty>
+      <div class="preview-header">
+        <h3>HTML 预览</h3>
+        <el-button type="primary" size="small" :loading="previewLoading" @click="handlePreview">
+          生成预览
+        </el-button>
+      </div>
+      <div v-if="previewHtml" class="preview-frame">
+        <iframe :srcdoc="previewHtml" class="preview-iframe" sandbox="allow-same-origin" />
+      </div>
+      <div v-else class="preview-placeholder">
+        <el-empty description="点击"生成预览"查看输出效果" />
       </div>
     </div>
 
@@ -125,6 +169,17 @@ function goBack() {
   margin-bottom: 12px;
 }
 
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.preview-header h3 {
+  margin-bottom: 0;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -155,6 +210,18 @@ function goBack() {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.preview-frame {
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.preview-iframe {
+  width: 100%;
+  height: 600px;
+  border: none;
 }
 
 .export-actions {

@@ -47,3 +47,7 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 futures = "0.3"
 # UUID
 uuid = { version = "1", features = ["v4"] }
+# Base64 编码（资源内联）
+base64 = "0.22"
+# 时间处理
+chrono = "0.4"

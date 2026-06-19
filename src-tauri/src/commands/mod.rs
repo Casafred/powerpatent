@@ -411,12 +411,95 @@ pub async fn rerun_module(
 #[tauri::command]
 pub async fn render_html(
     project_id: String,
-    _module_config: serde_json::Value,
-    _embed_pdf: bool,
+    module_config: serde_json::Value,
+    embed_pdf: bool,
 ) -> Result<String, String> {
-    log::info!("render_html called: project={}", project_id);
-    // TODO: Phase 4
-    Ok(String::new())
+    log::info!("render_html called: project={} embed_pdf={}", project_id, embed_pdf);
+
+    // 1. 从缓存加载所有板块输出
+    let cache = CacheManager::open(&get_cache_db_path())
+        .map_err(|e| format!("打开缓存失败: {}", e))?;
+    let entries = cache.list_project(&project_id)
+        .map_err(|e| format!("查询缓存失败: {}", e))?;
+
+    // 2. 构建板块输出映射
+    let mut modules: HashMap<String, serde_json::Value> = HashMap::new();
+    for entry in &entries {
+        let output: serde_json::Value = serde_json::from_str(&entry.output_json)
+            .unwrap_or(serde_json::json!({}));
+        let key = format!("{}_{}", entry.patent_id, entry.module_id);
+
+        // 为板块渲染 HTML 子模板
+        let renderer = crate::render::template::HtmlRenderer::new()
+            .map_err(|e| format!("创建渲染器失败: {}", e))?;
+
+        let rendered = renderer.render_module(&entry.module_id, &output)
+            .unwrap_or_default();
+
+        modules.insert(key, serde_json::Value::String(rendered));
+    }
+
+    // 3. 获取专利数据（从 module_config 中提取）
+    let patents: Vec<serde_json::Value> = module_config.get("patents")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    if patents.is_empty() {
+        return Err("没有专利数据可供渲染".to_string());
+    }
+
+    // 4. 为非 AI 板块（M1/M2）也渲染子模板
+    let renderer = crate::render::template::HtmlRenderer::new()
+        .map_err(|e| format!("创建渲染器失败: {}", e))?;
+
+    let mut all_modules = modules.clone();
+    for patent in &patents {
+        let patent_id = patent.get("publication_number")
+            .or_else(|| patent.get("application_number"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+
+        // M1 基本信息
+        if let Ok(rendered) = renderer.render_module("M1", patent) {
+            all_modules.insert(format!("{}_M1", patent_id), serde_json::Value::String(rendered));
+        }
+        // M2 法律状态
+        if let Ok(rendered) = renderer.render_module("M2", patent) {
+            all_modules.insert(format!("{}_M2", patent_id), serde_json::Value::String(rendered));
+        }
+    }
+
+    // 5. 构建渲染数据
+    let mode = module_config.get("mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("single");
+    let theme_name = module_config.get("theme_name")
+        .and_then(|v| v.as_str());
+    let theme_description = module_config.get("theme_description")
+        .and_then(|v| v.as_str());
+
+    let render_data = crate::render::template::build_render_data(
+        &patents, &all_modules, mode, theme_name, theme_description,
+    );
+
+    // 6. 注入内联 CSS
+    let css = crate::render::assets::get_inline_css();
+    let mut data_obj = render_data.as_object()
+        .cloned()
+        .unwrap_or_default();
+    data_obj.insert("inline_css".to_string(), serde_json::Value::String(css));
+
+    let final_data = serde_json::Value::Object(data_obj);
+
+    // 7. 渲染 HTML
+    let html = if mode == "multi" {
+        renderer.render_multi(&final_data)
+    } else {
+        renderer.render_single(&final_data)
+    }.map_err(|e| format!("渲染 HTML 失败: {}", e))?;
+
+    Ok(html)
 }
 
 /// 导出 HTML 文件
@@ -424,10 +507,18 @@ pub async fn render_html(
 pub async fn export_html(
     project_id: String,
     output_path: String,
-    _module_config: serde_json::Value,
-    _embed_pdf: bool,
+    module_config: serde_json::Value,
+    embed_pdf: bool,
 ) -> Result<(), String> {
-    log::info!("export_html: project={} path={}", project_id, output_path);
-    // TODO: Phase 4
+    log::info!("export_html: project={} path={} embed_pdf={}", project_id, output_path, embed_pdf);
+
+    // 渲染 HTML
+    let html = render_html(project_id, module_config, embed_pdf).await?;
+
+    // 写入文件
+    std::fs::write(&output_path, html)
+        .map_err(|e| format!("写入文件失败: {}", e))?;
+
+    log::info!("HTML 已导出到: {}", output_path);
     Ok(())
 }
