@@ -55,7 +55,7 @@ function togglePatentExpand(patentId: string) {
 }
 
 function goNext() {
-  router.push({ name: 'ai' })
+  router.push({ name: 'generate' })
 }
 
 function goBack() {
@@ -229,7 +229,7 @@ function goBack() {
     <div class="view-footer">
       <el-button @click="goBack">上一步</el-button>
       <el-button type="primary" @click="goNext">
-        下一步：AI 配置
+        下一步：生成与重跑
         <el-icon class="el-icon--right"><ArrowRight /></el-icon>
       </el-button>
     </div>

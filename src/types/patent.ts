@@ -20,6 +20,7 @@ export interface PatentData {
   figures?: FigureImage[]
   pdfBase64?: string
   source: InputSource
+  needsOcr?: boolean
 }
 
 export interface FamilyMember {

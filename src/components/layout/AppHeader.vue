@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useSettingsStore, type ThemeMode } from '../../stores/settings'
+import SettingsDrawer from '../settings/SettingsDrawer.vue'
 
 const settings = useSettingsStore()
+const settingsVisible = ref(false)
 
 function toggleTheme() {
   const modes: ThemeMode[] = ['light', 'dark', 'system']
@@ -34,14 +37,21 @@ function getThemeLabel() {
       <span class="app-subtitle">专利解读生成器</span>
     </div>
     <div class="header-right">
+      <el-tooltip content="设置" placement="bottom">
+        <button class="header-btn" @click="settingsVisible = true">
+          <el-icon :size="14"><Setting /></el-icon>
+        </button>
+      </el-tooltip>
       <el-tooltip :content="getThemeLabel()" placement="bottom">
-        <button class="theme-toggle" @click="toggleTheme">
+        <button class="header-btn" @click="toggleTheme">
           <el-icon :size="14"><component :is="getThemeIcon()" /></el-icon>
         </button>
       </el-tooltip>
       <span class="version-tag">v0.1.0</span>
     </div>
   </header>
+
+  <SettingsDrawer v-model:visible="settingsVisible" />
 </template>
 
 <style scoped>
@@ -80,10 +90,10 @@ function getThemeLabel() {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
-.theme-toggle {
+.header-btn {
   background: rgba(255, 255, 255, 0.1);
   border: none;
   color: inherit;
@@ -95,7 +105,7 @@ function getThemeLabel() {
   transition: background 0.2s;
 }
 
-.theme-toggle:hover {
+.header-btn:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 
@@ -105,5 +115,6 @@ function getThemeLabel() {
   border-radius: 4px;
   font-size: 11px;
   opacity: 0.6;
+  margin-left: 4px;
 }
 </style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import FileDrop from '../components/input/FileDrop.vue'
 import PatentList from '../components/input/PatentList.vue'
 import { useInputStore } from '../stores/input'
@@ -6,6 +7,8 @@ import { useRouter } from 'vue-router'
 
 const store = useInputStore()
 const router = useRouter()
+
+const hasOcrNeeded = computed(() => store.patents.some(p => p.needsOcr))
 
 function goNext() {
   router.push({ name: 'config' })
@@ -19,6 +22,16 @@ function goNext() {
 
     <FileDrop />
     <PatentList />
+
+    <el-alert
+      v-if="hasOcrNeeded"
+      type="warning"
+      title="检测到扫描件 PDF"
+      description="部分 PDF 为扫描件，文本内容较少。系统将自动调用 PaddleOCR 进行识别，也可在设置中切换 OCR 引擎。"
+      show-icon
+      :closable="false"
+      style="margin-top: 12px"
+    />
 
     <div class="view-footer" v-if="store.patents.length > 0">
       <el-button type="primary" @click="goNext">

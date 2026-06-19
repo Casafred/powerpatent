@@ -6,6 +6,7 @@ import { useAIConfigStore } from '../stores/aiConfig'
 import { useProjectStore } from '../stores/project'
 import { generateModule, getCachedModule, rerunModule } from '../services/tauri'
 import { MODULE_REGISTRY, type ModuleId, type ModuleLevel } from '../types/module'
+import { getActiveProvider } from '../types/ai'
 import AnnotationPanel from '../components/annotation/AnnotationPanel.vue'
 import { useRouter } from 'vue-router'
 import { ElNotification } from 'element-plus'
@@ -66,16 +67,15 @@ async function generateAll() {
     return
   }
 
-  if (!aiConfigStore.config.analysis.apiKey) {
-    ElNotification({ title: '缺少 API Key', message: '请先在"AI 配置"步骤设置 API Key', type: 'warning' })
-    router.push({ name: 'ai' })
+  if (!getActiveProvider(aiConfigStore.config).apiKey) {
+    ElNotification({ title: '缺少 API Key', message: '请先在设置中配置 AI 服务商 API Key', type: 'warning' })
     return
   }
 
   initModuleStates()
   generating.value = true
 
-  const provider = aiConfigStore.config.analysis
+  const provider = getActiveProvider(aiConfigStore.config)
   let errorCount = 0
 
   for (const patent of inputStore.patents) {
@@ -159,7 +159,7 @@ async function rerun(index: number) {
       patentId,
       moduleId: mod.id,
       options: {
-        provider: aiConfigStore.config.analysis,
+        provider: getActiveProvider(aiConfigStore.config),
         patent_data: patent,
         level: moduleConfig?.level || 'full',
       },
@@ -201,7 +201,7 @@ function goNext() {
 }
 
 function goBack() {
-  router.push({ name: 'ai' })
+  router.push({ name: 'config' })
 }
 </script>
 

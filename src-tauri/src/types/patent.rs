@@ -21,6 +21,8 @@ pub struct PatentData {
     pub family_members: Option<Vec<FamilyMember>>,
     #[serde(default)]
     pub source: InputSource,
+    #[serde(default)]
+    pub needs_ocr: bool,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]

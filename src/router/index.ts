@@ -20,22 +20,16 @@ const router = createRouter({
       meta: { step: 2, title: '模式与板块' },
     },
     {
-      path: '/ai',
-      name: 'ai',
-      component: () => import('../views/AIConfigView.vue'),
-      meta: { step: 3, title: 'AI 配置' },
-    },
-    {
       path: '/generate',
       name: 'generate',
       component: () => import('../views/GenerateView.vue'),
-      meta: { step: 4, title: '生成与重跑' },
+      meta: { step: 3, title: '生成与重跑' },
     },
     {
       path: '/export',
       name: 'export',
       component: () => import('../views/ExportView.vue'),
-      meta: { step: 5, title: '预览与导出' },
+      meta: { step: 4, title: '预览与导出' },
     },
   ],
 })

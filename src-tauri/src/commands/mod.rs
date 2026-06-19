@@ -72,9 +72,14 @@ pub async fn process_input(files: Vec<String>) -> Result<Vec<PatentData>, String
 
 fn process_pdf(path: &str) -> Result<PatentData, String> {
     log::info!("处理 PDF: {}", path);
+
+    // 1. 先尝试直接文本抽取
     let text = crate::pdf::extract::extract_text(path)
         .map_err(|e| format!("PDF 文本抽取失败: {}", e))?;
     let meta = crate::pdf::extract::extract_metadata(&text);
+
+    // 2. 如果文本内容太少（扫描件），标记需要 OCR
+    let needs_ocr = text.trim().len() < 100;
 
     Ok(PatentData {
         publication_number: meta.publication_number,
@@ -87,6 +92,7 @@ fn process_pdf(path: &str) -> Result<PatentData, String> {
         description_text: extract_section(&text, &["说明书", "DESCRIPTION"]),
         abstract_text: extract_section(&text, &["摘要", "ABSTRACT"]),
         source: InputSource::Pdf,
+        needs_ocr,
         ..Default::default()
     })
 }
@@ -203,7 +209,28 @@ pub async fn map_fields(
 #[tauri::command]
 pub async fn ocr_pdf(pdf_path: String, engine: String) -> Result<serde_json::Value, String> {
     log::info!("ocr_pdf called: {} engine={}", pdf_path, engine);
-    Ok(serde_json::json!({ "status": "not_implemented", "message": "OCR 功能将在后续版本实现" }))
+
+    let ocr_engine = match engine.as_str() {
+        "paddle_ocr_vl" => crate::ocr::OcrEngine::PaddleOcrVl,
+        "glm_ocr" => crate::ocr::OcrEngine::GlmOcr,
+        _ => crate::ocr::OcrEngine::PaddleOcrVl,
+    };
+
+    let glm_config = if matches!(ocr_engine, crate::ocr::OcrEngine::GlmOcr) {
+        Some(crate::ocr::GlmOcrConfig {
+            api_key: String::new(), // 从前端传入
+            base_url: "https://open.bigmodel.cn/api/paas/v4".to_string(),
+            model: "glm-4v-plus".to_string(),
+        })
+    } else {
+        None
+    };
+
+    let result = crate::ocr::ocr_pdf(&pdf_path, &ocr_engine, glm_config)
+        .await
+        .map_err(|e| format!("OCR 失败: {}", e))?;
+
+    Ok(serde_json::to_value(result).unwrap_or_default())
 }
 
 /// 获取缓存数据库路径

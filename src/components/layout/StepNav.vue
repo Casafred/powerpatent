@@ -12,9 +12,8 @@ const emit = defineEmits<{
 const steps = [
   { num: 1, title: '输入材料', icon: 'Upload' },
   { num: 2, title: '模式与板块', icon: 'Setting' },
-  { num: 3, title: 'AI 配置', icon: 'Cpu' },
-  { num: 4, title: '生成与重跑', icon: 'VideoPlay' },
-  { num: 5, title: '预览与导出', icon: 'Download' },
+  { num: 3, title: '生成与重跑', icon: 'VideoPlay' },
+  { num: 4, title: '预览与导出', icon: 'Download' },
 ]
 
 const maxReachedStep = computed(() => props.currentStep)
