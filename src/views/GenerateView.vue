@@ -172,7 +172,7 @@ async function rerun(index: number) {
   } catch (e: any) {
     mod.status = 'error'
     mod.error = e?.toString() || '重跑失败'
-    ElNotification({ title: '重跑失败', message: mod.error, type: 'error' })
+    ElNotification({ title: '重跑失败', message: mod.error || '未知错误', type: 'error' })
   }
 }
 
