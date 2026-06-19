@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAIConfigStore } from '../../stores/aiConfig'
-import { PROVIDER_PRESETS, testAIConnection, type ProviderType, type ConnectionTestResult } from '../../types/ai'
+import { PROVIDER_PRESETS, type ProviderType, type ConnectionTestResult } from '../../types/ai'
+import { testAiConnection } from '../../services/tauri'
 
 const store = useAIConfigStore()
 const visible = defineModel<boolean>('visible', { default: false })
@@ -22,7 +23,12 @@ async function testConnection(type: ProviderType) {
   testingProvider.value = type
   testResults.value[type] = null
   try {
-    testResults.value[type] = await testAIConnection(type, provider.apiKey, provider.baseUrl, provider.model)
+    testResults.value[type] = await testAiConnection({
+      providerType: type,
+      apiKey: provider.apiKey,
+      baseUrl: provider.baseUrl,
+      model: provider.model,
+    })
   } catch (e: any) {
     testResults.value[type] = { success: false, message: e?.message || '测试失败' }
   } finally {

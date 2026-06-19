@@ -102,3 +102,18 @@ export async function exportHtml(params: {
     embed_pdf: params.embedPdf,
   })
 }
+
+/** 测试 AI 连接 */
+export async function testAiConnection(params: {
+  providerType: string
+  apiKey: string
+  baseUrl: string
+  model: string
+}): Promise<{ success: boolean; message: string; latency?: number }> {
+  return invoke('test_ai_connection', {
+    provider_type: params.providerType,
+    api_key: params.apiKey,
+    base_url: params.baseUrl,
+    model: params.model,
+  })
+}

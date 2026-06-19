@@ -24,6 +24,7 @@ pub fn run() {
       commands::rerun_module,
       commands::render_html,
       commands::export_html,
+      commands::test_ai_connection,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

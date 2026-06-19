@@ -549,3 +549,90 @@ pub async fn export_html(
     log::info!("HTML 已导出到: {}", output_path);
     Ok(())
 }
+
+/// 测试 AI 连接
+#[tauri::command]
+pub async fn test_ai_connection(
+    provider_type: String,
+    api_key: String,
+    base_url: String,
+    model: String,
+) -> Result<serde_json::Value, String> {
+    use std::time::Instant;
+
+    log::info!("test_ai_connection: type={} base_url={} model={}", provider_type, base_url, model);
+
+    if api_key.is_empty() {
+        return Ok(serde_json::json!({
+            "success": false,
+            "message": "请先输入 API Key"
+        }));
+    }
+
+    // 构建 API URL
+    let url = {
+        let mut base = base_url.trim_end_matches('/').to_string();
+        if provider_type == "zhipu" {
+            if !base.ends_with("/v4") { base.push_str("/v4"); }
+        } else {
+            if !base.ends_with("/v1") { base.push_str("/v1"); }
+        }
+        format!("{}/chat/completions", base)
+    };
+
+    let start = Instant::now();
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
+
+    let body = serde_json::json!({
+        "model": model,
+        "messages": [{"role": "user", "content": "Hi"}],
+        "max_tokens": 5,
+        "stream": false,
+    });
+
+    let response = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .json(&body)
+        .send()
+        .await;
+
+    let latency = start.elapsed().as_millis() as u64;
+
+    match response {
+        Ok(resp) => {
+            if resp.status().is_success() {
+                Ok(serde_json::json!({
+                    "success": true,
+                    "message": format!("连接成功 ({}ms)", latency),
+                    "latency": latency,
+                }))
+            } else {
+                let status = resp.status().as_u16();
+                let error_text = resp.text().await.unwrap_or_default();
+                let short_error = if error_text.len() > 200 {
+                    format!("{}...", &error_text[..200])
+                } else {
+                    error_text
+                };
+                Ok(serde_json::json!({
+                    "success": false,
+                    "message": format!("HTTP {}: {}", status, short_error),
+                    "latency": latency,
+                }))
+            }
+        }
+        Err(e) => {
+            Ok(serde_json::json!({
+                "success": false,
+                "message": format!("网络错误: {}", e),
+                "latency": latency,
+            }))
+        }
+    }
+}
