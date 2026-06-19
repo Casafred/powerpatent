@@ -37,6 +37,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PatentReader-Windows
-          path: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/nsis/*.exe
+          path: src-tauri/target/release/bundle/nsis/*.exe
