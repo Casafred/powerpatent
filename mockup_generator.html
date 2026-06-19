@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>专利解读生成器 · 应用 UI 原型</title>
+<style>
+  :root{
+    --bg:#f0f2f5; --panel:#fff; --border:#e4e7eb; --text:#1f2329;
+    --text-2:#646a73; --text-3:#8f959e; --primary:#2b5fff;
+    --primary-bg:#eef3ff; --success:#00a870; --warn:#ff7d00;
+    --danger:#e5484d; --tag-bg:#f2f3f5;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+  /* 顶部标题栏 */
+  .titlebar{background:#1f2329;color:#fff;padding:8px 16px;display:flex;align-items:center;gap:12px;font-size:13px;flex-shrink:0}
+  .titlebar .app-name{font-weight:600;font-size:14px}
+  .titlebar .traffic{display:flex;gap:8px}
+  .titlebar .traffic span{width:12px;height:12px;border-radius:50%}
+  .titlebar .traffic .r{background:#ff5f57}.titlebar .traffic .y{background:#febc2e}.titlebar .traffic .g{background:#28c840}
+  .titlebar .menu{display:flex;gap:16px;margin-left:24px;opacity:.85}
+  .titlebar .menu span{cursor:pointer}
+  .titlebar .menu span:hover{opacity:1}
+  .titlebar .right{margin-left:auto;display:flex;gap:12px;opacity:.85;font-size:12px}
+
+  /* 主体三栏 */
+  .body{flex:1;display:flex;overflow:hidden}
+
+  /* 左侧步骤导航 */
+  .stepper{width:200px;background:var(--panel);border-right:1px solid var(--border);padding:20px 0;flex-shrink:0;overflow-y:auto}
+  .step{padding:12px 20px;display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--text-2);font-size:13px;position:relative}
+  .step:hover{background:var(--bg)}
+  .step.active{background:var(--primary-bg);color:var(--primary);font-weight:500}
+  .step.done{color:var(--success)}
+  .step .step-num{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+  .step.active .step-num{border-color:var(--primary);background:var(--primary);color:#fff}
+  .step.done .step-num{border-color:var(--success);background:var(--success);color:#fff}
+  .step .step-line{position:absolute;left:30px;top:34px;width:2px;height:24px;background:var(--border)}
+  .step:last-child .step-line{display:none}
+  .step.done .step-line{background:var(--success)}
+
+  /* 中间配置区 */
+  .config{flex:1;overflow-y:auto;padding:24px 32px;min-width:0}
+  .config h2{font-size:18px;margin-bottom:6px}
+  .config .sub{color:var(--text-3);font-size:13px;margin-bottom:20px}
+  .config-section{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px}
+  .config-section h3{font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+  .config-section h3 .tag{font-size:11px;padding:1px 6px;border-radius:3px;background:var(--tag-bg);color:var(--text-2);font-weight:400}
+
+  /* 模式选择 */
+  .mode-tabs{display:flex;gap:8px;margin-bottom:16px}
+  .mode-tab{flex:1;padding:14px;border:2px solid var(--border);border-radius:8px;cursor:pointer;text-align:center;transition:.2s}
+  .mode-tab.active{border-color:var(--primary);background:var(--primary-bg)}
+  .mode-tab .mt-icon{font-size:24px;margin-bottom:4px}
+  .mode-tab .mt-title{font-weight:600;font-size:13px}
+  .mode-tab .mt-desc{font-size:11px;color:var(--text-3);margin-top:2px}
+
+  /* 拖拽上传 */
+  .dropzone{border:2px dashed var(--border);border-radius:8px;padding:28px;text-align:center;color:var(--text-3);cursor:pointer;transition:.2s}
+  .dropzone:hover{border-color:var(--primary);background:var(--primary-bg);color:var(--primary)}
+  .dropzone .dz-icon{font-size:32px;margin-bottom:8px}
+  .dropzone .dz-text{font-size:13px}
+  .dropzone .dz-hint{font-size:11px;margin-top:4px}
+  .file-list{margin-top:12px}
+  .file-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;margin-bottom:6px;font-size:12px}
+  .file-item .fi-icon{font-size:16px}
+  .file-item .fi-name{flex:1}
+  .file-item .fi-type{font-size:10px;padding:1px 6px;border-radius:3px;background:var(--primary-bg);color:var(--primary)}
+  .file-item .fi-type.pdf{background:#fff0f0;color:var(--danger)}
+  .file-item .fi-remove{cursor:pointer;color:var(--text-3)}
+
+  /* 字段映射 */
+  .field-map{width:100%;border-collapse:collapse;font-size:12px}
+  .field-map th{text-align:left;padding:8px;color:var(--text-3);font-weight:500;border-bottom:1px solid var(--border);font-size:11px}
+  .field-map td{padding:8px;border-bottom:1px solid var(--border)}
+  .field-map select{padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--panel)}
+  .field-map .status-ok{color:var(--success)}
+  .field-map .status-miss{color:var(--warn)}
+
+  /* 板块勾选 */
+  .module-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .module-card{border:1px solid var(--border);border-radius:8px;padding:12px;cursor:pointer;transition:.2s}
+  .module-card:hover{border-color:var(--primary)}
+  .module-card.checked{border-color:var(--primary);background:var(--primary-bg)}
+  .module-card.locked{background:var(--bg);cursor:not-allowed;opacity:.85}
+  .module-card.locked.checked{background:#fff0f0;border-color:var(--danger)}
+  .module-card .mc-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .module-card .mc-num{font-size:11px;font-weight:600;color:var(--primary);width:28px}
+  .module-card .mc-name{font-size:13px;font-weight:500;flex:1}
+  .module-card .mc-checkbox{width:16px;height:16px;border:2px solid var(--border);border-radius:3px;display:flex;align-items:center;justify-content:center}
+  .module-card.checked .mc-checkbox{background:var(--primary);border-color:var(--primary);color:#fff}
+  .module-card.locked.checked .mc-checkbox{background:var(--danger);border-color:var(--danger)}
+  .module-card .mc-desc{font-size:11px;color:var(--text-3);padding-left:36px}
+  .module-card .mc-level{margin-top:6px;padding-left:36px}
+  .module-card .mc-level select{font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:3px}
+  .module-card .mc-tag{font-size:9px;padding:1px 5px;border-radius:2px;margin-left:4px}
+  .module-card .mc-tag.req{background:#fff1f0;color:var(--danger)}
+  .module-card .mc-tag.ext{background:#f0f5ff;color:var(--primary)}
+
+  /* 预设 */
+  .preset-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .preset{padding:6px 14px;border:1px solid var(--border);border-radius:16px;font-size:12px;cursor:pointer;color:var(--text-2)}
+  .preset:hover{border-color:var(--primary);color:var(--primary)}
+  .preset.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+  /* AI 配置 */
+  .ai-config{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .ai-config .form-group{display:flex;flex-direction:column;gap:4px}
+  .ai-config label{font-size:12px;color:var(--text-2)}
+  .ai-config input,.ai-config select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px}
+  .provider-tabs{display:flex;gap:6px;margin-bottom:12px}
+  .provider-tab{padding:6px 14px;border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer}
+  .provider-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+  /* 多篇专利列表 */
+  .patent-list-table{width:100%;border-collapse:collapse;font-size:12px}
+  .patent-list-table th{text-align:left;padding:8px;background:var(--bg);font-weight:600;border-bottom:1px solid var(--border);font-size:11px;color:var(--text-3)}
+  .patent-list-table td{padding:8px;border-bottom:1px solid var(--border)}
+  .patent-list-table input[type="checkbox"]{margin-right:4px}
+  .level-select{padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px}
+  .level-select.full{color:var(--success)}
+  .level-select.lite{color:var(--warn)}
+  .level-select.off{color:var(--text-3)}
+
+  /* 右侧预览 */
+  .preview{width:440px;border-left:1px solid var(--border);background:var(--panel);display:flex;flex-direction:column;flex-shrink:0}
+  .preview-head{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+  .preview-head .ph-actions{margin-left:auto;display:flex;gap:6px}
+  .preview-head .ph-actions button{padding:4px 10px;border:1px solid var(--border);background:var(--panel);border-radius:4px;font-size:11px;cursor:pointer}
+  .preview-head .ph-actions button.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .preview-iframe{flex:1;background:#fff;border:none}
+
+  /* 底部操作栏 */
+  .footer{background:var(--panel);border-top:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+  .footer .progress{flex:1;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-2)}
+  .footer .progress-bar{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+  .footer .progress-fill{height:100%;background:var(--primary);width:65%;transition:.3s}
+  .footer .btn{padding:8px 20px;border-radius:6px;border:1px solid var(--border);background:var(--panel);cursor:pointer;font-size:13px}
+  .footer .btn:hover{background:var(--bg)}
+  .footer .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .footer .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  .hint{background:#e6f4ff;border:1px solid #91caff;border-radius:6px;padding:8px 12px;font-size:12px;color:#0050b3;margin-bottom:16px}
+</style>
+</head>
+<body>
+
+<!-- 标题栏 -->
+<div class="titlebar">
+  <div class="traffic"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+  <div class="app-name">📋 Patent Reader · 专利解读生成器</div>
+  <div class="menu"><span>文件</span><span>编辑</span><span>视图</span><span>帮助</span></div>
+  <div class="right"><span>v0.1.0</span><span>GLM-4-Plus 已连接</span></div>
+</div>
+
+<div class="body">
+  <!-- 左侧步骤 -->
+  <aside class="stepper">
+    <div class="step done"><div class="step-num">✓</div><span>输入</span><div class="step-line"></div></div>
+    <div class="step active"><div class="step-num">2</div><span>模式与板块</span><div class="step-line"></div></div>
+    <div class="step"><div class="step-num">3</div><span>AI 配置</span><div class="step-line"></div></div>
+    <div class="step"><div class="step-num">4</div><span>生成与重跑</span><div class="step-line"></div></div>
+    <div class="step"><div class="step-num">5</div><span>预览与导出</span></div>
+  </aside>
+
+  <!-- 中间配置 -->
+  <div class="config">
+    <h2>模式与板块配置</h2>
+    <p class="sub">选择解读模式，勾选需要生成的板块。必要板块恒定输出，拓展板块可自由组合。</p>
+
+    <div class="hint">💡 当前为<b>多篇同主题模式</b>：主题"美工刀系列"已含 5 篇专利。可对每篇专利单独配置板块级别（Full/Lite/Off），或批量应用统一配置。</div>
+
+    <!-- 模式选择 -->
+    <div class="config-section">
+      <h3>解读模式</h3>
+      <div class="mode-tabs">
+        <div class="mode-tab">
+          <div class="mt-icon">📄</div>
+          <div class="mt-title">单篇深读</div>
+          <div class="mt-desc">一篇专利，全部板块纵向深读</div>
+        </div>
+        <div class="mode-tab active">
+          <div class="mt-icon">📚</div>
+          <div class="mt-title">多篇同主题</div>
+          <div class="mt-desc">用户策展主题，批量解读+对比</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主题信息（多篇模式） -->
+    <div class="config-section">
+      <h3>主题信息</h3>
+      <div class="ai-config">
+        <div class="form-group">
+          <label>主题名称</label>
+          <input type="text" value="美工刀系列专利解读">
+        </div>
+        <div class="form-group">
+          <label>主题描述（可选，用于 AI 生成主题综述）</label>
+          <input type="text" value="涵盖刀片锁定、自动回弹、安全防护等核心技术方向">
+        </div>
+      </div>
+    </div>
+
+    <!-- 板块预设 -->
+    <div class="config-section">
+      <h3>板块预设 <span class="tag">全局默认，可逐篇覆盖</span></h3>
+      <div class="preset-row">
+        <div class="preset">快速概览（仅必要·Lite）</div>
+        <div class="preset active">标准解读（必要Full + E2 + E3）</div>
+        <div class="preset">深度研读（全部Full + E1-E3）</div>
+        <div class="preset">完整版（全部板块）</div>
+        <div class="preset">+ 自定义保存</div>
+      </div>
+
+      <div class="module-grid">
+        <div class="module-card locked checked">
+          <div class="mc-head"><div class="mc-checkbox">✓</div><div class="mc-num">M1</div><div class="mc-name">专利基本信息</div><span class="mc-tag req">必要</span></div>
+          <div class="mc-desc">公开号、申请号、申请人、发明人、IPC/CPC</div>
+        </div>
+        <div class="module-card locked checked">
+          <div class="mc-head"><div class="mc-checkbox">✓</div><div class="mc-num">M2</div><div class="mc-name">法律状态与关键日期</div><span class="mc-tag req">必要</span></div>
+          <div class="mc-desc">有效性、申请/优先权/公开/授权日时间轴</div>
+        </div>
+        <div class="module-card locked checked">
+          <div class="mc-head"><div class="mc-checkbox">✓</div><div class="mc-num">M3</div><div class="mc-name">同族保护情况</div><span class="mc-tag req">必要</span></div>
+          <div class="mc-desc">同族成员、各国状态、保护主题概要</div>
+        </div>
+        <div class="module-card locked checked">
+          <div class="mc-head"><div class="mc-checkbox">✓</div><div class="mc-num">M4</div><div class="mc-name">一句话概要</div><span class="mc-tag req">必要</span></div>
+          <div class="mc-desc">技术问题 / 技术手段 / 技术效果</div>
+        </div>
+        <div class="module-card checked">
+          <div class="mc-head"><div class="mc-checkbox">✓</div><div class="mc-num">M5</div><div class="mc-name">权利要求范围解读</div><span class="mc-tag req">必要</span></div>
+          <div class="mc-desc">权要树、关键限定词解读、来源标注</div>
+          <div class="mc-level"><select><option>Full（完整）</option><option selected>Lite（仅独权）</option></select></div>
+        </div>
+        <div class="module-card checked">
+          <div class="mc-head"><div class="mc-checkbox">✓</div><div class="mc-num">M6</div><div class="mc-name">实施例归纳</div><span class="mc-tag req">必要</span></div>
+          <div class="mc-desc">各实施例核心方案、参数、变形</div>
+          <div class="mc-level"><select><option>Full（完整）</option><option selected>Lite（仅首例）</option></select></div>
+        </div>
+        <div class="module-card checked">
+          <div class="mc-head"><div class="mc-checkbox">✓</div><div class="mc-num">M7</div><div class="mc-name">其他揭示方案</div><span class="mc-tag req">必要</span></div>
+          <div class="mc-desc">未入权要但有参考价值的方案</div>
+        </div>
+        <div class="module-card">
+          <div class="mc-head"><div class="mc-checkbox"></div><div class="mc-num">E1</div><div class="mc-name">PDF 原文浏览</div><span class="mc-tag ext">拓展</span></div>
+          <div class="mc-desc">内嵌 pdf.js viewer（增加文件体积）</div>
+        </div>
+        <div class="module-card checked">
+          <div class="mc-head"><div class="mc-checkbox">✓</div><div class="mc-num">E2</div><div class="mc-name">附图对照</div><span class="mc-tag ext">拓展</span></div>
+          <div class="mc-desc">图库 + 权要/实施例双向跳转 + 框选标注</div>
+        </div>
+        <div class="module-card checked">
+          <div class="mc-head"><div class="mc-checkbox">✓</div><div class="mc-num">E3</div><div class="mc-name">批注</div><span class="mc-tag ext">拓展</span></div>
+          <div class="mc-desc">localStorage + JSON 导入导出</div>
+        </div>
+        <div class="module-card checked">
+          <div class="mc-head"><div class="mc-checkbox">✓</div><div class="mc-num">E4</div><div class="mc-name">多专利对比矩阵</div><span class="mc-tag ext">拓展</span></div>
+          <div class="mc-desc">多篇模式专属，横向维度对比</div>
+        </div>
+        <div class="module-card">
+          <div class="mc-head"><div class="mc-checkbox"></div><div class="mc-num">E5</div><div class="mc-name">技术演进时间线</div><span class="mc-tag ext">拓展</span></div>
+          <div class="mc-desc">申请人同主题专利演进</div>
+        </div>
+        <div class="module-card">
+          <div class="mc-head"><div class="mc-checkbox"></div><div class="mc-num">E6</div><div class="mc-name">申请人画像</div><span class="mc-tag ext">拓展</span></div>
+          <div class="mc-desc">同领域布局概览</div>
+        </div>
+        <div class="module-card">
+          <div class="mc-head"><div class="mc-checkbox"></div><div class="mc-num">E7</div><div class="mc-name">规避/设计空间提示</div><span class="mc-tag ext">拓展</span></div>
+          <div class="mc-desc">基于权要范围的规避思路（仅供参考）</div>
+        </div>
+        <div class="module-card">
+          <div class="mc-head"><div class="mc-checkbox"></div><div class="mc-num">E8</div><div class="mc-name">引用关系网络</div><span class="mc-tag ext">拓展</span></div>
+          <div class="mc-desc">前后向引用可视化</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 多篇逐篇配置 -->
+    <div class="config-section">
+      <h3>逐篇板块配置 <span class="tag">可批量勾选后统一调整级别</span></h3>
+      <table class="patent-list-table">
+        <thead>
+          <tr><th><input type="checkbox"></th><th>公开号</th><th>申请人</th><th>M5 权要</th><th>M6 实施例</th><th>E2 附图</th><th>标记</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><input type="checkbox" checked></td><td>CN114567890A</td><td>爱知制钢</td><td><select class="level-select full"><option selected>Full</option><option>Lite</option><option>Off</option></select></td><td><select class="level-select full"><option selected>Full</option><option>Lite</option><option>Off</option></select></td><td><select class="level-select full"><option selected>Full</option><option>Off</option></select></td><td>⭐ 重点</td></tr>
+          <tr><td><input type="checkbox"></td><td>CN115234567B</td><td>史丹利</td><td><select class="level-select lite"><option>Full</option><option selected>Lite</option><option>Off</option></select></td><td><select class="level-select lite"><option>Full</option><option selected>Lite</option><option>Off</option></select></td><td><select class="level-select off"><option>Full</option><option selected>Off</option></select></td><td></td></tr>
+          <tr><td><input type="checkbox"></td><td>CN113876543A</td><td>橄榄石</td><td><select class="level-select lite"><option>Full</option><option selected>Lite</option><option>Off</option></select></td><td><select class="level-select lite"><option>Full</option><option selected>Lite</option><option>Off</option></select></td><td><select class="level-select off"><option>Full</option><option selected>Off</option></select></td><td></td></tr>
+          <tr><td><input type="checkbox"></td><td>CN116345678A</td><td>田岛工具</td><td><select class="level-select lite"><option>Full</option><option selected>Lite</option><option>Off</option></select></td><td><select class="level-select lite"><option>Full</option><option selected>Lite</option><option>Off</option></select></td><td><select class="level-select off"><option>Full</option><option selected>Off</option></select></td><td></td></tr>
+          <tr><td><input type="checkbox"></td><td>CN114678901B</td><td>橄榄石</td><td><select class="level-select lite"><option>Full</option><option selected>Lite</option><option>Off</option></select></td><td><select class="level-select lite"><option>Full</option><option selected>Lite</option><option>Off</option></select></td><td><select class="level-select off"><option>Full</option><option selected>Off</option></select></td><td></td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:10px;font-size:12px;color:var(--text-3)">已勾选 1 篇 · <a href="#">批量设为 Full</a> · <a href="#">批量设为 Lite</a> · <a href="#">批量设为 Off</a></div>
+    </div>
+
+  </div>
+
+  <!-- 右侧预览 -->
+  <div class="preview">
+    <div class="preview-head">
+      📺 实时预览
+      <div class="ph-actions">
+        <button>刷新</button>
+        <button class="primary">导出 HTML</button>
+      </div>
+    </div>
+    <iframe class="preview-iframe" src="mockup_output.html"></iframe>
+  </div>
+</div>
+
+<!-- 底部操作栏 -->
+<div class="footer">
+  <div class="progress">
+    <span>生成进度</span>
+    <div class="progress-bar"><div class="progress-fill"></div></div>
+    <span>13/20 板块完成 · M5 权要解读生成中...</span>
+  </div>
+  <button class="btn">上一步</button>
+  <button class="btn primary">▶ 生成 / 继续重跑</button>
+</div>
+
+<script>
+  // 步骤切换
+  document.querySelectorAll('.step').forEach(s=>{
+    s.addEventListener('click',()=>{
+      document.querySelectorAll('.step').forEach(x=>x.classList.remove('active'));
+      s.classList.add('active');
+    });
+  });
+  // 模式切换
+  document.querySelectorAll('.mode-tab').forEach(t=>{
+    t.addEventListener('click',()=>{
+      document.querySelectorAll('.mode-tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+    });
+  });
+  // 板块勾选（非锁定）
+  document.querySelectorAll('.module-card:not(.locked)').forEach(c=>{
+    c.addEventListener('click',e=>{
+      if(e.target.tagName==='SELECT')return;
+      c.classList.toggle('checked');
+      const cb=c.querySelector('.mc-checkbox');
+      if(c.classList.contains('checked'))cb.innerHTML='✓';else cb.innerHTML='';
+    });
+  });
+  // 预设
+  document.querySelectorAll('.preset').forEach(p=>{
+    p.addEventListener('click',()=>{
+      document.querySelectorAll('.preset').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
