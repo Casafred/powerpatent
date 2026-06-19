@@ -85,7 +85,7 @@ fn extract_field(text: &str, patterns: &[&str]) -> Option<String> {
     None
 }
 
-#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PdfExtractResult {
     pub publication_number: Option<String>,
     pub application_number: Option<String>,

@@ -1,31 +1,42 @@
 /**
  * Tauri IPC 调用封装
+ * 自动检测 Tauri 环境，非 Tauri 环境下返回模拟数据
  */
 import { invoke } from '@tauri-apps/api/core'
 
+const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+
+function safeInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  if (!isTauri) {
+    console.warn(`[Tauri] Not in Tauri context, skipping invoke: ${cmd}`)
+    return Promise.reject(new Error('当前不在 Tauri 桌面环境中，此功能需要安装桌面应用后使用'))
+  }
+  return invoke<T>(cmd, args)
+}
+
 /** 输入处理 */
 export async function processInput(files: string[]): Promise<any[]> {
-  return invoke('process_input', { files })
+  return safeInvoke('process_input', { files })
 }
 
 /** PDF 文本抽取 */
 export async function extractPdfText(pdfPath: string): Promise<any> {
-  return invoke('extract_pdf_text', { pdfPath })
+  return safeInvoke('extract_pdf_text', { pdfPath })
 }
 
 /** PDF 图像抽取 */
 export async function extractPdfImages(pdfPath: string): Promise<any> {
-  return invoke('extract_pdf_images', { pdfPath })
+  return safeInvoke('extract_pdf_images', { pdfPath })
 }
 
 /** 字段映射 */
 export async function mapFields(tablePath: string, mapping: Record<number, string>): Promise<any> {
-  return invoke('map_fields', { tablePath, mapping })
+  return safeInvoke('map_fields', { tablePath, mapping })
 }
 
 /** OCR 识别 */
 export async function ocrPdf(pdfPath: string, engine: string): Promise<any> {
-  return invoke('ocr_pdf', { pdfPath, engine })
+  return safeInvoke('ocr_pdf', { pdfPath, engine })
 }
 
 /** AI 生成（单板块） */
@@ -37,7 +48,7 @@ export async function generateModule(params: {
   provider: any
   patentData: any
 }): Promise<any> {
-  return invoke('generate_module', {
+  return safeInvoke('generate_module', {
     project_id: params.projectId,
     patent_id: params.patentId,
     module_id: params.moduleId,
@@ -53,7 +64,7 @@ export async function getCachedModule(params: {
   patentId: string
   moduleId: string
 }): Promise<any> {
-  return invoke('get_cached_module', {
+  return safeInvoke('get_cached_module', {
     project_id: params.projectId,
     patent_id: params.patentId,
     module_id: params.moduleId,
@@ -67,7 +78,7 @@ export async function rerunModule(params: {
   moduleId: string
   options: any
 }): Promise<any> {
-  return invoke('rerun_module', {
+  return safeInvoke('rerun_module', {
     project_id: params.projectId,
     patent_id: params.patentId,
     module_id: params.moduleId,
@@ -81,7 +92,7 @@ export async function renderHtml(params: {
   moduleConfig: any
   embedPdf: boolean
 }): Promise<string> {
-  return invoke('render_html', {
+  return safeInvoke('render_html', {
     project_id: params.projectId,
     module_config: params.moduleConfig,
     embed_pdf: params.embedPdf,
@@ -95,7 +106,7 @@ export async function exportHtml(params: {
   moduleConfig: any
   embedPdf: boolean
 }): Promise<void> {
-  return invoke('export_html', {
+  return safeInvoke('export_html', {
     project_id: params.projectId,
     output_path: params.outputPath,
     module_config: params.moduleConfig,
@@ -110,7 +121,7 @@ export async function testAiConnection(params: {
   baseUrl: string
   model: string
 }): Promise<{ success: boolean; message: string; latency?: number }> {
-  return invoke('test_ai_connection', {
+  return safeInvoke('test_ai_connection', {
     provider_type: params.providerType,
     api_key: params.apiKey,
     base_url: params.baseUrl,

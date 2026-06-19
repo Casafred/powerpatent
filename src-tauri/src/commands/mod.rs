@@ -36,7 +36,7 @@ pub async fn process_input(files: Vec<String>) -> Result<Vec<PatentData>, String
 
         match ext.as_str() {
             "pdf" => {
-                let patent = process_pdf(file_path)?;
+                let patent = process_pdf(file_path).await?;
                 patents.push(patent);
             }
             "xlsx" | "xls" => {
@@ -70,7 +70,7 @@ pub async fn process_input(files: Vec<String>) -> Result<Vec<PatentData>, String
     Ok(patents)
 }
 
-fn process_pdf(path: &str) -> Result<PatentData, String> {
+async fn process_pdf(path: &str) -> Result<PatentData, String> {
     log::info!("处理 PDF: {}", path);
 
     // 1. 先尝试直接文本抽取
@@ -78,21 +78,49 @@ fn process_pdf(path: &str) -> Result<PatentData, String> {
         .map_err(|e| format!("PDF 文本抽取失败: {}", e))?;
     let meta = crate::pdf::extract::extract_metadata(&text);
 
-    // 2. 如果文本内容太少（扫描件），标记需要 OCR
+    // 2. 如果文本内容太少（扫描件），自动调用 PaddleOCR
     let needs_ocr = text.trim().len() < 100;
 
+    let (final_text, ocr_used) = if needs_ocr {
+        log::info!("PDF 文本不足 ({} chars)，自动调用 PaddleOCR", text.trim().len());
+        match crate::ocr::ocr_pdf(path, &crate::ocr::OcrEngine::PaddleOcrVl, None).await {
+            Ok(ocr_result) => {
+                let ocr_text = if ocr_result.markdown.is_some() && !ocr_result.markdown.as_ref().unwrap().is_empty() {
+                    ocr_result.markdown.unwrap()
+                } else {
+                    ocr_result.text
+                };
+                log::info!("PaddleOCR 完成，获得 {} chars", ocr_text.len());
+                (ocr_text, true)
+            }
+            Err(e) => {
+                log::warn!("PaddleOCR 失败: {}，回退到原始文本", e);
+                (text, false)
+            }
+        }
+    } else {
+        (text, false)
+    };
+
+    // 如果用了 OCR，重新提取元信息
+    let final_meta = if ocr_used {
+        crate::pdf::extract::extract_metadata(&final_text)
+    } else {
+        meta.clone()
+    };
+
     Ok(PatentData {
-        publication_number: meta.publication_number,
-        application_number: meta.application_number,
-        applicant: meta.applicant,
-        title: meta.title,
-        filing_date: meta.filing_date,
-        ipc: meta.ipc,
-        claims_text: extract_section(&text, &["权利要求书", "CLAIMS"]),
-        description_text: extract_section(&text, &["说明书", "DESCRIPTION"]),
-        abstract_text: extract_section(&text, &["摘要", "ABSTRACT"]),
+        publication_number: final_meta.publication_number.or(meta.publication_number),
+        application_number: final_meta.application_number.or(meta.application_number),
+        applicant: final_meta.applicant.or(meta.applicant),
+        title: final_meta.title.or(meta.title),
+        filing_date: final_meta.filing_date.or(meta.filing_date),
+        ipc: final_meta.ipc.or(meta.ipc),
+        claims_text: extract_section(&final_text, &["权利要求书", "CLAIMS"]),
+        description_text: extract_section(&final_text, &["说明书", "DESCRIPTION"]),
+        abstract_text: extract_section(&final_text, &["摘要", "ABSTRACT"]),
         source: InputSource::Pdf,
-        needs_ocr,
+        needs_ocr: ocr_used,
         ..Default::default()
     })
 }
