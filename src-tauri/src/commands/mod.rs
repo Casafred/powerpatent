@@ -10,7 +10,8 @@ use crate::ai::provider::config_from_json;
 use crate::ai::prompt::PromptManager;
 use crate::cache::sqlite::{CacheManager, CacheEntry};
 use std::collections::HashMap;
-
+use std::path::PathBuf;
+use tauri::Manager;
 /// 板块 ID → Prompt 模板 ID 映射
 const MODULE_PROMPT_MAP: &[(&str, &str)] = &[
     ("M3", "m3_family"),
@@ -350,30 +351,40 @@ fn dirs_data_dir() -> String {
     }
 }
 
-/// 获取 Prompt 目录路径
-fn get_prompts_dir() -> String {
-    // 开发阶段使用项目目录
-    let exe_dir = std::env::current_exe()
-        .map(|p| p.parent().map(|pp| pp.display().to_string()).unwrap_or_default())
-        .unwrap_or_default();
-
-    // 尝试多个路径
-    for dir in &[
-        format!("{}/prompts", env!("CARGO_MANIFEST_DIR")),
-        format!("{}/prompts", exe_dir),
-        "./prompts".to_string(),
-    ] {
-        if std::path::Path::new(dir).exists() {
-            return dir.to_string();
+/// 获取 Prompt 目录路径（优先使用 Tauri 资源目录）
+fn get_prompts_dir(app_handle: &tauri::AppHandle) -> String {
+    // 1. 尝试 Tauri 资源目录（打包后的应用）
+    if let Ok(resource_dir) = app_handle.path().resource_dir() {
+        let prompts_path = resource_dir.join("prompts");
+        if prompts_path.exists() {
+            return prompts_path.display().to_string();
         }
     }
 
+    // 2. 开发阶段使用项目源码目录
+    let dev_path = format!("{}/prompts", env!("CARGO_MANIFEST_DIR"));
+    if std::path::Path::new(&dev_path).exists() {
+        return dev_path;
+    }
+
+    // 3. 相对于可执行文件
+    if let Ok(exe_dir) = std::env::current_exe()
+        .map(|p| p.parent().map(|pp| pp.display().to_string()).unwrap_or_default())
+    {
+        let exe_path = format!("{}/prompts", exe_dir);
+        if std::path::Path::new(&exe_path).exists() {
+            return exe_path;
+        }
+    }
+
+    // 4. 回退到 CARGO_MANIFEST_DIR（即使不存在也返回，让后续逻辑报错）
     format!("{}/prompts", env!("CARGO_MANIFEST_DIR"))
 }
 
 /// AI 生成（单板块）
 #[tauri::command]
 pub async fn generate_module(
+    app_handle: tauri::AppHandle,
     project_id: String,
     patent_id: String,
     module_id: String,
@@ -406,7 +417,7 @@ pub async fn generate_module(
     };
 
     // 2. 加载 Prompt 模板
-    let prompts_dir = get_prompts_dir();
+    let prompts_dir = get_prompts_dir(&app_handle);
     let prompt_mgr = PromptManager::load_from_dir(&prompts_dir)
         .map_err(|e| format!("加载 Prompt 模板失败: {}", e))?;
 
@@ -731,4 +742,112 @@ pub async fn test_ai_connection(
             }))
         }
     }
+}
+
+/// 获取用户自定义 Prompt 目录
+fn get_user_prompts_dir() -> String {
+    let data_dir = dirs_data_dir();
+    let user_prompts_dir = format!("{}/prompts", data_dir);
+    std::fs::create_dir_all(&user_prompts_dir).ok();
+    user_prompts_dir
+}
+
+/// 列出所有 Prompt 模板（含用户自定义覆盖）
+#[tauri::command]
+pub async fn list_prompts(app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    log::info!("list_prompts called");
+
+    // 1. 加载内置模板
+    let prompts_dir = get_prompts_dir(&app_handle);
+    let builtin_mgr = PromptManager::load_from_dir(&prompts_dir)
+        .map_err(|e| format!("加载内置 Prompt 模板失败: {}", e))?;
+
+    // 2. 加载用户自定义覆盖模板
+    let user_prompts_dir = get_user_prompts_dir();
+    let user_mgr = PromptManager::load_from_dir(&user_prompts_dir)
+        .map_err(|e| format!("加载用户 Prompt 模板失败: {}", e))?;
+
+    // 3. 合并：用户覆盖优先
+    let mut result = Vec::new();
+
+    // 收集所有模板 ID（内置 + 用户自定义）
+    let mut all_ids: Vec<String> = builtin_mgr.template_ids();
+    for id in user_mgr.template_ids() {
+        if !all_ids.contains(&id) {
+            all_ids.push(id);
+        }
+    }
+
+    for id in &all_ids {
+        let is_user_modified = user_mgr.get(id).is_some();
+        let template = if is_user_modified {
+            user_mgr.get(id).unwrap()
+        } else {
+            match builtin_mgr.get(id) {
+                Some(t) => t,
+                None => continue,
+            }
+        };
+
+        result.push(serde_json::json!({
+            "id": template.id,
+            "name": template.name,
+            "description": template.description,
+            "temperature": template.temperature,
+            "template": template.prompt_template,
+            "isUserModified": is_user_modified,
+        }));
+    }
+
+    Ok(serde_json::Value::Array(result))
+}
+
+/// 保存用户自定义 Prompt 模板
+#[tauri::command]
+pub async fn save_prompt(
+    prompt_id: String,
+    name: String,
+    description: String,
+    temperature: f64,
+    template: String,
+) -> Result<(), String> {
+    log::info!("save_prompt called: {}", prompt_id);
+
+    let user_prompts_dir = get_user_prompts_dir();
+    let file_path = format!("{}/{}.yaml", user_prompts_dir, prompt_id);
+
+    // 构建模板数据（与原始 YAML 结构一致）
+    let prompt_data = serde_json::json!({
+        "id": prompt_id,
+        "name": name,
+        "description": description,
+        "temperature": temperature as f32,
+        "prompt_template": template,
+    });
+
+    let yaml_content = serde_yaml::to_string(&prompt_data)
+        .map_err(|e| format!("序列化 YAML 失败: {}", e))?;
+
+    std::fs::write(&file_path, yaml_content)
+        .map_err(|e| format!("写入文件失败: {}", e))?;
+
+    log::info!("用户 Prompt 模板已保存: {}", file_path);
+    Ok(())
+}
+
+/// 重置 Prompt 模板（删除用户自定义覆盖）
+#[tauri::command]
+pub async fn reset_prompt(prompt_id: String) -> Result<(), String> {
+    log::info!("reset_prompt called: {}", prompt_id);
+
+    let user_prompts_dir = get_user_prompts_dir();
+    let file_path = PathBuf::from(&user_prompts_dir).join(format!("{}.yaml", prompt_id));
+
+    if file_path.exists() {
+        std::fs::remove_file(&file_path)
+            .map_err(|e| format!("删除文件失败: {}", e))?;
+        log::info!("用户 Prompt 模板已删除: {:?}", file_path);
+    }
+
+    Ok(())
 }

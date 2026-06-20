@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct PatentData {
     pub publication_number: Option<String>,
     pub grant_number: Option<String>,
@@ -23,9 +24,12 @@ pub struct PatentData {
     pub source: InputSource,
     #[serde(default)]
     pub needs_ocr: bool,
+    #[serde(default)]
+    pub pdf_file_path: Option<String>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct FamilyMember {
     pub country: String,
     pub publication_number: String,
@@ -34,6 +38,7 @@ pub struct FamilyMember {
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub enum InputSource {
     #[default]
     Pdf,
