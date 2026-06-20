@@ -51,3 +51,7 @@ uuid = { version = "1", features = ["v4"] }
 base64 = "0.22"
 # 时间处理
 chrono = "0.4"
+
+# Windows 注册表（读取系统代理设置）
+[target.'cfg(windows)'.dependencies]
+winreg = "0.52"

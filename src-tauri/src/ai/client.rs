@@ -1,6 +1,14 @@
-use crate::ai::models::{AIClientConfig, ChatMessage, ChatRequest, ChatResponse};
+use crate::ai::models::{AIClientConfig, AIProvider, ChatMessage, ChatRequest, ChatResponse};
 use anyhow::Result;
 use futures::StreamExt;
+
+/// 根据服务商类型返回 API 路径前缀
+fn api_path_prefix(provider: &AIProvider) -> &'static str {
+    match provider {
+        AIProvider::Zhipu => "/v4",
+        _ => "/v1",
+    }
+}
 
 /// AI 客户端
 pub struct AIClient {
@@ -10,7 +18,7 @@ pub struct AIClient {
 
 impl AIClient {
     pub fn new(config: AIClientConfig) -> Self {
-        let http = reqwest::Client::new();
+        let http = crate::ai::proxy::create_http_client();
         Self { config, http }
     }
 
@@ -27,7 +35,8 @@ impl AIClient {
             stream: Some(false),
         };
 
-        let url = format!("{}/v1/chat/completions", self.config.base_url.trim_end_matches('/'));
+        let prefix = api_path_prefix(&self.config.provider);
+        let url = format!("{}{}/chat/completions", self.config.base_url.trim_end_matches('/'), prefix);
 
         let response = self.http
             .post(&url)
@@ -65,7 +74,8 @@ impl AIClient {
             stream: Some(true),
         };
 
-        let url = format!("{}/v1/chat/completions", self.config.base_url.trim_end_matches('/'));
+        let prefix = api_path_prefix(&self.config.provider);
+        let url = format!("{}{}/chat/completions", self.config.base_url.trim_end_matches('/'), prefix);
 
         let response = self.http
             .post(&url)

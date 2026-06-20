@@ -114,23 +114,14 @@ export async function exportHtml(params: {
   })
 }
 
-/** 测试 AI 连接（浏览器中直接 fetch，Tauri 中走后端） */
+/** 测试 AI 连接（统一走浏览器 fetch，自动继承系统代理） */
 export async function testAiConnection(params: {
   providerType: string
   apiKey: string
   baseUrl: string
   model: string
 }): Promise<{ success: boolean; message: string; latency?: number }> {
-  if (!isTauri) {
-    // 浏览器环境：直接 fetch（无 CSP 限制）
-    return testAiConnectionFetch(params)
-  }
-  return safeInvoke('test_ai_connection', {
-    provider_type: params.providerType,
-    api_key: params.apiKey,
-    base_url: params.baseUrl,
-    model: params.model,
-  })
+  return testAiConnectionFetch(params)
 }
 
 /** 浏览器端直接 fetch 测试连接 */
