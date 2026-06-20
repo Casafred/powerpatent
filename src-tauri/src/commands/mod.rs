@@ -18,6 +18,12 @@ const MODULE_PROMPT_MAP: &[(&str, &str)] = &[
     ("M5", "m5_claims"),
     ("M6", "m6_embodiments"),
     ("M7", "m7_alternatives"),
+    ("M8", "m8_family_claims_diff"),
+    ("E2", "e2_figure_comparison"),
+    ("E4", "e4_comparison_matrix"),
+    ("E5", "e5_tech_timeline"),
+    ("E6", "e6_applicant_profile"),
+    ("E7", "e7_design_around"),
 ];
 
 /// 处理输入文件
@@ -121,6 +127,7 @@ async fn process_pdf(path: &str) -> Result<PatentData, String> {
         abstract_text: extract_section(&final_text, &["摘要", "ABSTRACT"]),
         source: InputSource::Pdf,
         needs_ocr: ocr_used,
+        pdf_file_path: Some(path.to_string()),
         ..Default::default()
     })
 }

@@ -1,0 +1,79 @@
+id: e2_figure_comparison
+name: 附图对照
+description: 识别专利附图，描述各图内容、关键要素标注，并关联权利要求和实施例
+model_hint: strong
+temperature: 0.3
+input_fields:
+  - claims_text
+  - description_text
+output_schema:
+  type: object
+  properties:
+    figures:
+      type: array
+      items:
+        type: object
+        properties:
+          figure_number:
+            type: string
+          title:
+            type: string
+          description:
+            type: string
+          key_elements:
+            type: array
+            items:
+              type: object
+              properties:
+                label:
+                  type: string
+                element_name:
+                  type: string
+                related_claim:
+                  type: integer
+                related_embodiment:
+                  type: string
+          summary:
+            type: string
+prompt_template: |
+  你是一位资深专利分析师，擅长专利附图解读与对照分析。请根据以下专利文献，识别其中提及的所有附图，并对每幅附图进行详细解读。
+
+  ## 权利要求书
+
+  {{claims_text}}
+
+  ## 说明书
+
+  {{description_text}}
+
+  ## 分析步骤
+
+  1. **识别附图**：从说明书中提取所有提及的附图编号和名称（如"图1""图2"等）。
+  2. **描述附图内容**：根据说明书对附图的描述，概括每幅附图所展示的技术内容。
+  3. **提取关键要素**：列出附图中标注的关键要素（如标号对应的部件名称），并关联到对应的权利要求和实施例。
+  4. **总结**：对每幅附图在理解专利技术方案中的作用进行简要总结。
+
+  ## 输出要求
+
+  请严格按以下 JSON 格式输出，不要输出任何其他内容：
+
+  ```json
+  {
+    "figures": [
+      {
+        "figure_number": "图1",
+        "title": "附图标题",
+        "description": "该附图所展示的技术内容描述",
+        "key_elements": [
+          {
+            "label": "100",
+            "element_name": "部件名称",
+            "related_claim": 1,
+            "related_embodiment": "实施例1"
+          }
+        ],
+        "summary": "该附图在理解专利技术方案中的作用简述"
+      }
+    ]
+  }
+  ```

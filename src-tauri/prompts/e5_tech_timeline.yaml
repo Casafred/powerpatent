@@ -1,0 +1,83 @@
+id: e5_tech_timeline
+name: 技术演进时间线
+description: 根据专利文献构建技术演进时间线，识别里程碑和技术趋势
+model_hint: strong
+temperature: 0.3
+input_fields:
+  - claims_text
+  - description_text
+output_schema:
+  type: object
+  properties:
+    timeline:
+      type: array
+      items:
+        type: object
+        properties:
+          date:
+            type: string
+          patent_id:
+            type: string
+          milestone:
+            type: string
+          significance:
+            type: string
+          tech_category:
+            type: string
+    trends:
+      type: array
+      items:
+        type: object
+        properties:
+          trend_name:
+            type: string
+          description:
+            type: string
+          direction:
+            type: string
+    summary:
+      type: string
+prompt_template: |
+  你是一位资深专利分析师，擅长技术演进趋势分析。请根据以下专利文献，构建技术演进时间线，识别关键技术里程碑和发展趋势。
+
+  ## 权利要求书
+
+  {{claims_text}}
+
+  ## 说明书（参考）
+
+  {{description_text}}
+
+  ## 分析步骤
+
+  1. **提取时间节点**：根据各专利的申请日或公开日，按时间顺序排列。
+  2. **识别里程碑**：对每件专利，提炼其在技术演进中的里程碑意义（如首次提出某技术、技术路线转折、性能突破等）。
+  3. **归类技术方向**：将每件专利归入相应的技术类别（如材料、结构、工艺、应用等）。
+  4. **归纳趋势**：从时间线中识别技术发展的整体趋势（如从单一功能到多功能集成、从实验室到产业化等），描述趋势方向。
+  5. **总结**：概括技术演进的总体脉络和未来可能方向。
+
+  ## 输出要求
+
+  请严格按以下 JSON 格式输出，不要输出任何其他内容：
+
+  ```json
+  {
+    "timeline": [
+      {
+        "date": "申请日或公开日（YYYY-MM-DD）",
+        "patent_id": "专利号",
+        "milestone": "该专利在技术演进中的里程碑描述",
+        "significance": "该里程碑的技术意义",
+        "tech_category": "技术类别"
+      }
+    ],
+    "trends": [
+      {
+        "trend_name": "趋势名称",
+        "description": "该趋势的具体描述",
+        "direction": "趋势发展方向（如：从A向B演进）"
+      }
+    ],
+    "summary": "技术演进时间线的整体总结"
+  }
+  ```

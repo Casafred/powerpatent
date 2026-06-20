@@ -1,0 +1,86 @@
+id: e4_comparison_matrix
+name: 多专利对比矩阵
+description: 在关键维度上对多件专利进行对比，生成对比矩阵并分析关键差异
+model_hint: strong
+temperature: 0.3
+input_fields:
+  - claims_text
+  - description_text
+output_schema:
+  type: object
+  properties:
+    dimensions:
+      type: array
+      items:
+        type: object
+        properties:
+          dimension:
+            type: string
+          values:
+            type: array
+            items:
+              type: object
+              properties:
+                patent_id:
+                  type: string
+                content:
+                  type: string
+    key_differences:
+      type: array
+      items:
+        type: object
+        properties:
+          dimension:
+            type: string
+          description:
+            type: string
+          significance:
+            type: string
+    similarity_score:
+      type: number
+    summary:
+      type: string
+prompt_template: |
+  你是一位资深专利分析师，擅长多专利对比分析。请根据以下多件专利的权利要求和说明书，在关键维度上进行系统对比，生成对比矩阵。
+
+  ## 权利要求书
+
+  {{claims_text}}
+
+  ## 说明书（参考）
+
+  {{description_text}}
+
+  ## 分析步骤
+
+  1. **确定对比维度**：从技术领域、技术问题、技术手段、技术效果、保护范围、关键参数等维度中选择最具区分意义的维度。
+  2. **逐维度对比**：对每个维度，逐一列出每件专利的相关内容。
+  3. **分析关键差异**：识别各维度上最重要的差异点，说明差异的具体表现及其对保护范围和技术方案的影响。
+  4. **评估相似度**：综合各维度对比结果，给出0-1之间的整体相似度评分（0表示完全不同，1表示完全相同）。
+  5. **总结**：概括多件专利之间的核心异同。
+
+  ## 输出要求
+
+  请严格按以下 JSON 格式输出，不要输出任何其他内容：
+
+  ```json
+  {
+    "dimensions": [
+      {
+        "dimension": "对比维度名称（如：技术手段）",
+        "values": [
+          { "patent_id": "专利号", "content": "该专利在此维度上的具体内容" }
+        ]
+      }
+    ],
+    "key_differences": [
+      {
+        "dimension": "差异所在维度",
+        "description": "差异的具体描述",
+        "significance": "该差异对保护范围或技术方案的影响"
+      }
+    ],
+    "similarity_score": 0.65,
+    "summary": "多件专利核心异同的整体总结"
+  }
+  ```

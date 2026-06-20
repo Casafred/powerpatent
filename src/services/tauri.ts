@@ -114,6 +114,37 @@ export async function exportHtml(params: {
   })
 }
 
+/** 提示词模板 */
+export interface PromptTemplate {
+  id: string
+  name: string
+  description: string
+  temperature: number
+  template: string
+  isUserModified: boolean
+}
+
+/** 获取所有提示词模板 */
+export async function listPrompts(): Promise<PromptTemplate[]> {
+  return safeInvoke('list_prompts')
+}
+
+/** 保存提示词模板 */
+export async function savePrompt(params: {
+  promptId: string
+  name: string
+  description: string
+  temperature: number
+  template: string
+}): Promise<void> {
+  return safeInvoke('save_prompt', params)
+}
+
+/** 重置提示词模板 */
+export async function resetPrompt(params: { promptId: string }): Promise<void> {
+  return safeInvoke('reset_prompt', params)
+}
+
 /** 测试 AI 连接（统一走浏览器 fetch，自动继承系统代理） */
 export async function testAiConnection(params: {
   providerType: string

@@ -16,7 +16,7 @@ const steps = [
   { num: 4, title: '预览与导出', icon: 'Download' },
 ]
 
-const maxReachedStep = computed(() => props.currentStep)
+const maxReachedStep = computed(() => 4) // 允许点击所有步骤
 </script>
 
 <template>

@@ -1,0 +1,83 @@
+id: e6_applicant_profile
+name: 申请人画像
+description: 分析申请人的申请策略和技术领域布局，构建申请人画像
+model_hint: strong
+temperature: 0.3
+input_fields:
+  - claims_text
+  - description_text
+output_schema:
+  type: object
+  properties:
+    applicant_name:
+      type: string
+    overview:
+      type: string
+    technology_areas:
+      type: array
+      items:
+        type: object
+        properties:
+          area:
+            type: string
+          patent_count:
+            type: integer
+          key_patents:
+            type: array
+            items:
+              type: string
+    filing_strategy:
+      type: string
+    geographic_distribution:
+      type: array
+      items:
+        type: object
+        properties:
+          region:
+            type: string
+          count:
+            type: integer
+    competitive_position:
+      type: string
+prompt_template: |
+  你是一位资深专利分析师，擅长申请人画像与专利布局分析。请根据以下专利文献，分析申请人的申请策略和技术领域布局。
+
+  ## 权利要求书
+
+  {{claims_text}}
+
+  ## 说明书（参考）
+
+  {{description_text}}
+
+  ## 分析步骤
+
+  1. **识别申请人**：从专利文献中提取申请人信息。
+  2. **概述**：对申请人的整体情况（如企业规模、行业地位、研发方向等）进行概述。
+  3. **技术领域分析**：将专利按技术领域分类，统计各领域的专利数量，列出各领域的关键专利。
+  4. **申请策略分析**：从申请时间分布、权利要求层级设计、同族布局等方面分析申请人的专利申请策略（如防御性申请、进攻性申请、标准必要专利布局等）。
+  5. **地域分布**：统计专利的地域分布情况。
+  6. **竞争地位**：评估申请人在相关技术领域的竞争地位。
+
+  ## 输出要求
+
+  请严格按以下 JSON 格式输出，不要输出任何其他内容：
+
+  ```json
+  {
+    "applicant_name": "申请人名称",
+    "overview": "申请人整体情况概述",
+    "technology_areas": [
+      {
+        "area": "技术领域名称",
+        "patent_count": 3,
+        "key_patents": ["专利号1", "专利号2"]
+      }
+    ],
+    "filing_strategy": "申请人的专利申请策略分析",
+    "geographic_distribution": [
+      { "region": "国家/地区", "count": 2 }
+    ],
+    "competitive_position": "申请人在相关技术领域的竞争地位评估"
+  }
+  ```

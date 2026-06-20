@@ -1,16 +1,25 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import FileDrop from '../components/input/FileDrop.vue'
 import PatentList from '../components/input/PatentList.vue'
+import HistoryPanel from '../components/HistoryPanel.vue'
 import { useInputStore } from '../stores/input'
+import { useHistoryStore } from '../stores/history'
 import { useRouter } from 'vue-router'
 
 const store = useInputStore()
+const historyStore = useHistoryStore()
 const router = useRouter()
 
 const hasOcrNeeded = computed(() => store.patents.some(p => p.needsOcr))
+const showHistory = ref(false)
 
 function goNext() {
+  router.push({ name: 'config' })
+}
+
+function onSessionRestored() {
+  showHistory.value = false
   router.push({ name: 'config' })
 }
 </script>
@@ -19,6 +28,25 @@ function goNext() {
   <div class="view-container">
     <h2>输入材料</h2>
     <p class="view-desc">上传专利 PDF 或结构化表格文件，系统将自动识别并提取专利信息</p>
+
+    <div class="input-actions">
+      <el-button
+        :type="historyStore.sessions.length > 0 ? 'default' : 'info'"
+        size="small"
+        @click="showHistory = !showHistory"
+      >
+        <el-icon><Clock /></el-icon>
+        历史记录
+        <el-tag v-if="historyStore.sessions.length > 0" size="small" type="info" round style="margin-left: 4px;">
+          {{ historyStore.sessions.length }}
+        </el-tag>
+      </el-button>
+    </div>
+
+    <!-- 历史记录面板 -->
+    <div v-if="showHistory" class="history-section">
+      <HistoryPanel @restored="onSessionRestored" />
+    </div>
 
     <FileDrop />
     <PatentList />
@@ -52,7 +80,21 @@ function goNext() {
 .view-desc {
   color: var(--app-text-secondary);
   font-size: 13px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+}
+
+.input-actions {
+  margin-bottom: 16px;
+}
+
+.history-section {
+  margin-bottom: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--app-card-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 12px;
 }
 
 .view-footer {

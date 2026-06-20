@@ -1,0 +1,142 @@
+id: m8_family_claims_diff
+name: 同族权利要求差异性对比
+description: 提取同族专利独立权利要求，按相似性聚类并对比差异，列出独有权利要求
+model_hint: strong
+temperature: 0.3
+input_fields:
+  - claims_text
+  - description_text
+output_schema:
+  type: object
+  properties:
+    independent_claims_summary:
+      type: array
+      items:
+        type: object
+        properties:
+          patent_id:
+            type: string
+          claim_number:
+            type: integer
+          subject:
+            type: string
+          core_features:
+            type: array
+            items:
+              type: string
+    clusters:
+      type: array
+      items:
+        type: object
+        properties:
+          cluster_name:
+            type: string
+          claims:
+            type: array
+            items:
+              type: object
+              properties:
+                patent_id:
+                  type: string
+                claim_number:
+                  type: integer
+          common_features:
+            type: array
+            items:
+              type: string
+          differences:
+            type: array
+            items:
+              type: object
+              properties:
+                dimension:
+                  type: string
+                details:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      patent_id:
+                        type: string
+                      claim_number:
+                        type: integer
+                      content:
+                        type: string
+          scope_comparison:
+            type: string
+    unclustered_claims:
+      type: array
+      items:
+        type: object
+        properties:
+          patent_id:
+            type: string
+          claim_number:
+            type: integer
+          subject:
+            type: string
+          uniqueness_note:
+            type: string
+    summary:
+      type: string
+prompt_template: |
+  你是一位资深专利分析师，擅长同族专利的权利要求对比分析。请对以下同族专利的权利要求进行差异性对比分析。
+
+  ## 权利要求书
+
+  {{claims_text}}
+
+  ## 说明书（参考）
+
+  {{description_text}}
+
+  ## 分析步骤
+
+  1. **提取独立权利要求**：从每件专利中提取所有独立权利要求，概括其保护主题和核心技术特征。
+  2. **按相似性聚类**：将保护主题相同或相近的独立权利要求归入同一聚类。
+  3. **对比差异**：对每个聚类内的权利要求，从技术领域、技术问题、技术手段、技术效果等维度进行逐项对比，分析保护范围的大小关系。
+  4. **列出独有权利要求**：将无法归入任何聚类、仅在某件专利中出现的独立权利要求单独列出，并说明其独特之处。
+
+  ## 输出要求
+
+  请严格按以下 JSON 格式输出，不要输出任何其他内容：
+
+  ```json
+  {
+    "independent_claims_summary": [
+      {
+        "patent_id": "专利号",
+        "claim_number": 1,
+        "subject": "保护主题概述",
+        "core_features": ["必要技术特征1", "必要技术特征2"]
+      }
+    ],
+    "clusters": [
+      {
+        "cluster_name": "聚类名称（如：方法权利要求聚类）",
+        "claims": [
+          { "patent_id": "专利号", "claim_number": 1 }
+        ],
+        "common_features": ["共同技术特征1", "共同技术特征2"],
+        "differences": [
+          {
+            "dimension": "对比维度（如：技术手段）",
+            "details": [
+              { "patent_id": "专利号", "claim_number": 1, "content": "该权利要求在此维度上的具体内容" }
+            ]
+          }
+        ],
+        "scope_comparison": "该聚类内各权利要求保护范围的大小关系及差异总结"
+      }
+    ],
+    "unclustered_claims": [
+      {
+        "patent_id": "专利号",
+        "claim_number": 1,
+        "subject": "保护主题概述",
+        "uniqueness_note": "该权利要求的独特之处说明"
+      }
+    ],
+    "summary": "同族权利要求差异性对比的整体结论"
+  }
+  ```

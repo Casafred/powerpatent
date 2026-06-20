@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { loadPersisted, persist } from '../utils/persist'
 
 export interface Annotation {
   id: string
@@ -12,7 +13,7 @@ export interface Annotation {
 }
 
 export const useAnnotationStore = defineStore('annotation', () => {
-  const annotations = ref<Annotation[]>([])
+  const annotations = ref<Annotation[]>(loadPersisted('annotations', []))
 
   function addAnnotation(annotation: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt'>) {
     const now = new Date().toISOString()
@@ -65,6 +66,9 @@ export const useAnnotationStore = defineStore('annotation', () => {
   function clearAll() {
     annotations.value = []
   }
+
+  // 持久化
+  watch(annotations, (val) => persist('annotations', val), { deep: true })
 
   return {
     annotations,

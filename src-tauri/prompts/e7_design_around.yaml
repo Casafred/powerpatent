@@ -1,0 +1,93 @@
+id: e7_design_around
+name: 规避/设计空间提示
+description: 分析权利要求边界，提示可规避的设计空间及风险等级
+model_hint: strong
+temperature: 0.3
+input_fields:
+  - claims_text
+  - description_text
+output_schema:
+  type: object
+  properties:
+    disclaimer:
+      type: string
+    boundary_analysis:
+      type: array
+      items:
+        type: object
+        properties:
+          claim_number:
+            type: integer
+          boundary_type:
+            type: string
+          core_limitation:
+            type: string
+    design_spaces:
+      type: array
+      items:
+        type: object
+        properties:
+          space_id:
+            type: string
+          target_feature:
+            type: string
+          alternative_approach:
+            type: string
+          risk_level:
+            type: string
+          feasibility:
+            type: string
+          key_consideration:
+            type: string
+    summary:
+      type: string
+prompt_template: |
+  你是一位资深专利分析师，擅长权利要求边界分析与规避设计。请根据以下专利文献，分析权利要求的保护边界，并提示可能的设计规避空间。
+
+  ## 权利要求书
+
+  {{claims_text}}
+
+  ## 说明书（参考）
+
+  {{description_text}}
+
+  ## 分析步骤
+
+  1. **边界分析**：逐项分析独立权利要求的保护边界，识别其边界类型（如封闭式/开放式、数值范围、功能限定等），提取核心限定特征。
+  2. **识别设计空间**：针对每个核心限定特征，分析是否存在替代技术方案可以绕开该限定，即"设计规避空间"。
+  3. **评估风险**：对每个设计规避空间，评估侵权风险等级（高/中/低），并说明评估依据。
+  4. **评估可行性**：从技术实现角度评估每个替代方案的可行性。
+  5. **关键注意事项**：列出采用该替代方案时需要特别注意的事项（如等同原则的适用、从属权利要求的进一步限定等）。
+
+  ## 重要声明
+
+  本分析仅供技术参考，不构成法律意见。具体规避方案的可行性应由专利律师结合具体案情判断。
+
+  ## 输出要求
+
+  请严格按以下 JSON 格式输出，不要输出任何其他内容：
+
+  ```json
+  {
+    "disclaimer": "本分析仅供技术参考，不构成法律意见。具体规避方案的可行性应由专利律师结合具体案情判断。",
+    "boundary_analysis": [
+      {
+        "claim_number": 1,
+        "boundary_type": "边界类型（如：开放式、封闭式、数值范围、功能限定等）",
+        "core_limitation": "该权利要求的核心限定特征"
+      }
+    ],
+    "design_spaces": [
+      {
+        "space_id": "DS-1",
+        "target_feature": "针对的限定特征",
+        "alternative_approach": "替代技术方案描述",
+        "risk_level": "高/中/低",
+        "feasibility": "技术可行性评估",
+        "key_consideration": "采用该替代方案时的关键注意事项"
+      }
+    ],
+    "summary": "规避设计空间的整体总结"
+  }
+  ```

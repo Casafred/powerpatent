@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { PatentData } from '../types/patent'
+import { loadPersisted, persist } from '../utils/persist'
 
 export const useInputStore = defineStore('input', () => {
-  const patents = ref<PatentData[]>([])
+  const patents = ref<PatentData[]>(loadPersisted('patents', []))
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -20,6 +21,9 @@ export const useInputStore = defineStore('input', () => {
   function removePatent(index: number) {
     patents.value.splice(index, 1)
   }
+
+  // 持久化
+  watch(patents, (val) => persist('patents', val), { deep: true })
 
   return {
     patents,

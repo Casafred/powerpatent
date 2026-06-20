@@ -14,18 +14,30 @@ function getStatusTag(status?: string) {
   if (status.includes('失效') || status.toLowerCase().includes('expired')) return { text: status, type: 'danger' as const }
   return { text: status, type: 'info' as const }
 }
+
+function removePatent(index: number) {
+  store.removePatent(index)
+}
 </script>
 
 <template>
   <div class="patent-list-section" v-if="hasResults">
-    <h3>识别结果（{{ patents.length }} 篇专利）</h3>
+    <div class="list-header">
+      <h3>识别结果（{{ patents.length }} 篇专利）</h3>
+      <el-button type="danger" text size="small" @click="store.clearPatents()">清空全部</el-button>
+    </div>
     <div class="patent-list">
       <div v-for="(patent, index) in patents" :key="index" class="patent-card">
         <div class="patent-header">
           <span class="patent-title">{{ patent.title || '未识别标题' }}</span>
-          <el-tag v-if="patent.legalStatus" v-bind="getStatusTag(patent.legalStatus)" size="small" round>
-            {{ getStatusTag(patent.legalStatus).text }}
-          </el-tag>
+          <div class="patent-header-actions">
+            <el-tag v-if="patent.legalStatus" v-bind="getStatusTag(patent.legalStatus)" size="small" round>
+              {{ getStatusTag(patent.legalStatus).text }}
+            </el-tag>
+            <el-button type="danger" text size="small" @click="removePatent(index)">
+              <el-icon><Delete /></el-icon>
+            </el-button>
+          </div>
         </div>
         <div class="patent-meta">
           <span v-if="patent.publicationNumber">{{ patent.publicationNumber }}</span>
@@ -47,6 +59,17 @@ function getStatusTag(status?: string) {
   margin-bottom: 12px;
 }
 
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.list-header h3 {
+  margin-bottom: 0;
+}
+
 .patent-list {
   display: flex;
   flex-direction: column;
@@ -66,12 +89,19 @@ function getStatusTag(status?: string) {
   gap: 8px;
 }
 
+.patent-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .patent-title {
   font-size: 14px;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
 }
 
 .patent-meta {
