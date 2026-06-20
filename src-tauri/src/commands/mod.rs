@@ -66,8 +66,72 @@ pub async fn process_input(files: Vec<String>) -> Result<Vec<PatentData>, String
     });
 
     if has_pdf && has_table {
+        // 收集所有 PDF 的 (文件名提取的编号 → 路径) 映射
+        let pdf_map: Vec<(String, String)> = patents.iter()
+            .filter(|p| p.pdf_file_path.is_some())
+            .filter_map(|p| {
+                let path = p.pdf_file_path.as_ref().unwrap();
+                let filename = path.rsplit(|c| c == '/' || c == '\\').next().unwrap_or("");
+                // 从文件名中提取编号（去掉 .pdf 扩展名）
+                let stem = filename.strip_suffix(".pdf")
+                    .or_else(|| filename.strip_suffix(".PDF"))
+                    .unwrap_or(filename);
+                // 同时也用专利自身识别出的公开号/申请号
+                let mut ids = vec![stem.to_uppercase()];
+                if let Some(ref pn) = p.publication_number {
+                    ids.push(pn.to_uppercase());
+                }
+                if let Some(ref an) = p.application_number {
+                    ids.push(an.to_uppercase());
+                }
+                // 返回所有可能的标识
+                Some(ids.into_iter().map(|id| (id, path.clone())).collect::<Vec<_>>())
+            })
+            .flatten()
+            .collect();
+
+        // 对非 PDF 来源的专利，尝试匹配 PDF
         for patent in &mut patents {
-            if patent.source == InputSource::Pdf {
+            if patent.source != InputSource::Pdf && patent.pdf_file_path.is_none() {
+                // 尝试用公开号匹配
+                let mut matched_path: Option<String> = None;
+                if let Some(ref pn) = patent.publication_number {
+                    let pn_upper = pn.to_uppercase();
+                    for (id, path) in &pdf_map {
+                        if pn_upper.contains(id) || id.contains(&pn_upper) {
+                            matched_path = Some(path.clone());
+                            break;
+                        }
+                    }
+                    // 也尝试去掉 CN/US 等国家代码前缀匹配
+                    if matched_path.is_none() {
+                        let pn_clean = pn_upper.trim_start_matches(|c: char| c.is_ascii_alphabetic());
+                        for (id, path) in &pdf_map {
+                            let id_clean = id.trim_start_matches(|c: char| c.is_ascii_alphabetic());
+                            if !pn_clean.is_empty() && (pn_clean == id_clean || pn_clean.contains(id_clean) || id_clean.contains(pn_clean)) {
+                                matched_path = Some(path.clone());
+                                break;
+                            }
+                        }
+                    }
+                }
+                // 尝试用申请号匹配
+                if matched_path.is_none() {
+                    if let Some(ref an) = patent.application_number {
+                        let an_upper = an.to_uppercase();
+                        for (id, path) in &pdf_map {
+                            if an_upper.contains(id) || id.contains(&an_upper) {
+                                matched_path = Some(path.clone());
+                                break;
+                            }
+                        }
+                    }
+                }
+                if let Some(pdf_path) = matched_path {
+                    patent.pdf_file_path = Some(pdf_path);
+                    patent.source = InputSource::Mixed;
+                }
+            } else if patent.source == InputSource::Pdf {
                 patent.source = InputSource::Mixed;
             }
         }
