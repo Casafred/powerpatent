@@ -5,31 +5,22 @@ import PatentList from '../components/input/PatentList.vue'
 import HistoryPanel from '../components/HistoryPanel.vue'
 import { useInputStore } from '../stores/input'
 import { useHistoryStore } from '../stores/history'
-import { useRouter } from 'vue-router'
 
 const store = useInputStore()
 const historyStore = useHistoryStore()
-const router = useRouter()
 
 const hasOcrNeeded = computed(() => store.patents.some(p => p.needsOcr))
 const showHistory = ref(false)
 
-function goNext() {
-  router.push({ name: 'config' })
-}
-
 function onSessionRestored() {
   showHistory.value = false
-  router.push({ name: 'config' })
 }
 </script>
 
 <template>
   <div class="view-container">
-    <h2>输入材料</h2>
-    <p class="view-desc">上传专利 PDF 或结构化表格文件，系统将自动识别并提取专利信息</p>
-
-    <div class="input-actions">
+    <div class="view-header">
+      <h2>输入材料</h2>
       <el-button
         :type="historyStore.sessions.length > 0 ? 'default' : 'info'"
         size="small"
@@ -42,6 +33,7 @@ function onSessionRestored() {
         </el-tag>
       </el-button>
     </div>
+    <p class="view-desc">选择输入模式，上传专利文件。左侧导航可随时切换到其他页面</p>
 
     <!-- 历史记录面板 -->
     <div v-if="showHistory" class="history-section">
@@ -60,30 +52,26 @@ function onSessionRestored() {
       :closable="false"
       style="margin-top: 12px"
     />
-
-    <div class="view-footer" v-if="store.patents.length > 0">
-      <el-button type="primary" @click="goNext">
-        下一步：模式与板块
-        <el-icon class="el-icon--right"><ArrowRight /></el-icon>
-      </el-button>
-    </div>
   </div>
 </template>
 
 <style scoped>
-.view-container h2 {
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.view-header h2 {
   font-size: 18px;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin: 0;
 }
 
 .view-desc {
   color: var(--app-text-secondary);
   font-size: 13px;
-  margin-bottom: 12px;
-}
-
-.input-actions {
   margin-bottom: 16px;
 }
 
@@ -95,11 +83,5 @@ function onSessionRestored() {
   border: 1px solid var(--app-border);
   border-radius: 8px;
   padding: 12px;
-}
-
-.view-footer {
-  margin-top: 24px;
-  display: flex;
-  justify-content: flex-end;
 }
 </style>

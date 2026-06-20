@@ -53,20 +53,23 @@ function getPatentId(patent: any): string {
 function togglePatentExpand(patentId: string) {
   expandedPatentId.value = expandedPatentId.value === patentId ? null : patentId
 }
-
-function goNext() {
-  router.push({ name: 'generate' })
-}
-
-function goBack() {
-  router.push({ name: 'input' })
-}
 </script>
 
 <template>
   <div class="view-container">
     <h2>模式与板块</h2>
     <p class="view-desc">选择解读模式，配置输出板块组合</p>
+
+    <!-- 无专利数据提示 -->
+    <el-alert
+      v-if="inputStore.patents.length === 0"
+      type="info"
+      title="尚未输入专利数据"
+      description="您可以直接配置板块选项，也可以先前往"输入材料"页面上传专利文件"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 16px"
+    />
 
     <!-- 模式选择 -->
     <div class="config-section">
@@ -227,9 +230,9 @@ function goBack() {
 
     <!-- 导航 -->
     <div class="view-footer">
-      <el-button @click="goBack">上一步</el-button>
-      <el-button type="primary" @click="goNext">
-        下一步：生成与重跑
+      <el-button @click="router.push({ name: 'input' })">返回输入</el-button>
+      <el-button type="primary" @click="router.push({ name: 'generate' })">
+        前往生成
         <el-icon class="el-icon--right"><ArrowRight /></el-icon>
       </el-button>
     </div>

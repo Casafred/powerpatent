@@ -234,10 +234,6 @@ function getStatusText(status: ModuleState['status']) {
 function goNext() {
   router.push({ name: 'export' })
 }
-
-function goBack() {
-  router.push({ name: 'config' })
-}
 </script>
 
 <template>
@@ -350,13 +346,13 @@ function goBack() {
 
     <!-- 导航 -->
     <div class="view-footer">
-      <el-button @click="goBack">上一步</el-button>
+      <el-button @click="router.push({ name: 'config' })">返回配置</el-button>
       <el-button
         type="primary"
         :disabled="moduleStates.length === 0 || generating"
         @click="goNext"
       >
-        下一步：预览与导出
+        前往导出
         <el-icon class="el-icon--right"><ArrowRight /></el-icon>
       </el-button>
     </div>

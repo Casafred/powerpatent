@@ -72,16 +72,23 @@ async function handleExport() {
     exporting.value = false
   }
 }
-
-function goBack() {
-  router.push({ name: 'generate' })
-}
 </script>
 
 <template>
   <div class="view-container">
     <h2>预览与导出</h2>
     <p class="view-desc">预览生成结果，导出为离线自包含 HTML 文件</p>
+
+    <!-- 无专利数据提示 -->
+    <el-alert
+      v-if="!hasPatents"
+      type="info"
+      title="尚未生成分析内容"
+      description="请先前往"输入材料"上传专利，再在"生成与重跑"中完成 AI 分析"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 16px"
+    />
 
     <!-- 导出配置 -->
     <div class="config-section">
@@ -139,7 +146,7 @@ function goBack() {
 
     <!-- 导航 -->
     <div class="view-footer">
-      <el-button @click="goBack">上一步</el-button>
+      <el-button @click="router.push({ name: 'generate' })">返回生成</el-button>
     </div>
   </div>
 </template>
