@@ -142,10 +142,10 @@ const SINGLE_PATENT_TEMPLATE: &str = r##"<!DOCTYPE html>
       </div>
     </div>
 
-    <div class='tab-container'>
-      <div class='tab-nav'>
+    <div class='tab-container' id='tabs-{{index}}'>
+      <div class='tab-nav' id='tab-nav-{{index}}'>
         {{#if has_pdf}}<button class='tab-btn' data-tab='PDF'>PDF 原文</button>{{/if}}
-        {{#if modules.M1}}<button class='tab-btn active' data-tab='M1'>M1 基本信息</button>{{/if}}
+        {{#if modules.M1}}<button class='tab-btn' data-tab='M1'>M1 基本信息</button>{{/if}}
         {{#if modules.M2}}<button class='tab-btn' data-tab='M2'>M2 法律状态</button>{{/if}}
         {{#if modules.M3}}<button class='tab-btn' data-tab='M3'>M3 同族保护</button>{{/if}}
         {{#if modules.M4}}<button class='tab-btn' data-tab='M4'>M4 一句话概要</button>{{/if}}
@@ -153,17 +153,19 @@ const SINGLE_PATENT_TEMPLATE: &str = r##"<!DOCTYPE html>
         {{#if modules.M6}}<button class='tab-btn' data-tab='M6'>M6 实施例</button>{{/if}}
         {{#if modules.M7}}<button class='tab-btn' data-tab='M7'>M7 替代方案</button>{{/if}}
         {{#if modules.M8}}<button class='tab-btn' data-tab='M8'>M8 同族权要差异</button>{{/if}}
+        {{#if modules.E2}}<button class='tab-btn' data-tab='E2'>E2 附图对照</button>{{/if}}
       </div>
-      <div class='tab-content'>
-        {{#if has_pdf}}<div class='tab-pane' id='tab-PDF'><div class='pdf-embed-container'><iframe src='data:application/pdf;base64,{{pdf_base64}}' class='pdf-embed-iframe' /></div></div>{{/if}}
-        {{#if modules.M1}}<div class='tab-pane active' id='tab-M1'>{{{modules.M1}}}</div>{{/if}}
-        {{#if modules.M2}}<div class='tab-pane' id='tab-M2'>{{{modules.M2}}}</div>{{/if}}
-        {{#if modules.M3}}<div class='tab-pane' id='tab-M3'>{{{modules.M3}}}</div>{{/if}}
-        {{#if modules.M4}}<div class='tab-pane' id='tab-M4'>{{{modules.M4}}}</div>{{/if}}
-        {{#if modules.M5}}<div class='tab-pane' id='tab-M5'>{{{modules.M5}}}</div>{{/if}}
-        {{#if modules.M6}}<div class='tab-pane' id='tab-M6'>{{{modules.M6}}}</div>{{/if}}
-        {{#if modules.M7}}<div class='tab-pane' id='tab-M7'>{{{modules.M7}}}</div>{{/if}}
-        {{#if modules.M8}}<div class='tab-pane' id='tab-M8'>{{{modules.M8}}}</div>{{/if}}
+      <div class='tab-content' id='tab-content-{{index}}'>
+        {{#if has_pdf}}<div class='tab-pane' data-pane='PDF'><div class='pdf-embed-container'><p class='pdf-notice'>PDF 原文请在 PatentReader 桌面应用中查看，或使用支持 PDF 内嵌的浏览器打开此文件。</p></div></div>{{/if}}
+        {{#if modules.M1}}<div class='tab-pane' data-pane='M1'>{{{modules.M1}}}</div>{{/if}}
+        {{#if modules.M2}}<div class='tab-pane' data-pane='M2'>{{{modules.M2}}}</div>{{/if}}
+        {{#if modules.M3}}<div class='tab-pane' data-pane='M3'>{{{modules.M3}}}</div>{{/if}}
+        {{#if modules.M4}}<div class='tab-pane' data-pane='M4'>{{{modules.M4}}}</div>{{/if}}
+        {{#if modules.M5}}<div class='tab-pane' data-pane='M5'>{{{modules.M5}}}</div>{{/if}}
+        {{#if modules.M6}}<div class='tab-pane' data-pane='M6'>{{{modules.M6}}}</div>{{/if}}
+        {{#if modules.M7}}<div class='tab-pane' data-pane='M7'>{{{modules.M7}}}</div>{{/if}}
+        {{#if modules.M8}}<div class='tab-pane' data-pane='M8'>{{{modules.M8}}}</div>{{/if}}
+        {{#if modules.E2}}<div class='tab-pane' data-pane='E2'>{{{modules.E2}}}</div>{{/if}}
       </div>
     </div>
   </article>
@@ -175,15 +177,36 @@ const SINGLE_PATENT_TEMPLATE: &str = r##"<!DOCTYPE html>
 </div>
 
 <script>
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const container = btn.closest('.tab-container');
-    container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    container.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+(function(){
+  function switchTab(btn, tabId) {
+    var container = btn.closest('.tab-container');
+    var btns = container.querySelectorAll('.tab-btn');
+    var panes = container.querySelectorAll('.tab-pane');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+    for (var i = 0; i < panes.length; i++) panes[i].classList.remove('active');
     btn.classList.add('active');
-    container.querySelector('#tab-' + btn.dataset.tab).classList.add('active');
-  });
-});
+    for (var i = 0; i < panes.length; i++) {
+      if (panes[i].getAttribute('data-pane') === tabId) {
+        panes[i].classList.add('active');
+      }
+    }
+  }
+  // 为所有 tab 按钮绑定点击事件
+  var allBtns = document.querySelectorAll('.tab-btn');
+  for (var i = 0; i < allBtns.length; i++) {
+    allBtns[i].addEventListener('click', function() {
+      switchTab(this, this.getAttribute('data-tab'));
+    });
+  }
+  // 激活每组 tab 的第一个
+  var containers = document.querySelectorAll('.tab-container');
+  for (var c = 0; c < containers.length; c++) {
+    var firstBtn = containers[c].querySelector('.tab-btn');
+    var firstPane = containers[c].querySelector('.tab-pane');
+    if (firstBtn) firstBtn.classList.add('active');
+    if (firstPane) firstPane.classList.add('active');
+  }
+})();
 </script>
 </body>
 </html>"##;
@@ -231,22 +254,24 @@ const MULTI_PATENT_TEMPLATE: &str = r##"<!DOCTYPE html>
       </div>
     </div>
 
-    <div class='tab-container'>
-      <div class='tab-nav'>
+    <div class='tab-container' id='tabs-{{index}}'>
+      <div class='tab-nav' id='tab-nav-{{index}}'>
         {{#if has_pdf}}<button class='tab-btn' data-tab='PDF'>PDF 原文</button>{{/if}}
-        {{#if modules.M1}}<button class='tab-btn active' data-tab='M1'>M1 基本信息</button>{{/if}}
+        {{#if modules.M1}}<button class='tab-btn' data-tab='M1'>M1 基本信息</button>{{/if}}
         {{#if modules.M4}}<button class='tab-btn' data-tab='M4'>M4 一句话概要</button>{{/if}}
         {{#if modules.M5}}<button class='tab-btn' data-tab='M5'>M5 权利要求</button>{{/if}}
         {{#if modules.M6}}<button class='tab-btn' data-tab='M6'>M6 实施例</button>{{/if}}
         {{#if modules.M3}}<button class='tab-btn' data-tab='M3'>M3 同族保护</button>{{/if}}
+        {{#if modules.E2}}<button class='tab-btn' data-tab='E2'>E2 附图对照</button>{{/if}}
       </div>
-      <div class='tab-content'>
-        {{#if has_pdf}}<div class='tab-pane' id='tab-PDF'><div class='pdf-embed-container'><iframe src='data:application/pdf;base64,{{pdf_base64}}' class='pdf-embed-iframe' /></div></div>{{/if}}
-        {{#if modules.M1}}<div class='tab-pane active' id='tab-M1'>{{{modules.M1}}}</div>{{/if}}
-        {{#if modules.M4}}<div class='tab-pane' id='tab-M4'>{{{modules.M4}}}</div>{{/if}}
-        {{#if modules.M5}}<div class='tab-pane' id='tab-M5'>{{{modules.M5}}}</div>{{/if}}
-        {{#if modules.M6}}<div class='tab-pane' id='tab-M6'>{{{modules.M6}}}</div>{{/if}}
-        {{#if modules.M3}}<div class='tab-pane' id='tab-M3'>{{{modules.M3}}}</div>{{/if}}
+      <div class='tab-content' id='tab-content-{{index}}'>
+        {{#if has_pdf}}<div class='tab-pane' data-pane='PDF'><div class='pdf-embed-container'><p class='pdf-notice'>PDF 原文请在 PatentReader 桌面应用中查看。</p></div></div>{{/if}}
+        {{#if modules.M1}}<div class='tab-pane' data-pane='M1'>{{{modules.M1}}}</div>{{/if}}
+        {{#if modules.M4}}<div class='tab-pane' data-pane='M4'>{{{modules.M4}}}</div>{{/if}}
+        {{#if modules.M5}}<div class='tab-pane' data-pane='M5'>{{{modules.M5}}}</div>{{/if}}
+        {{#if modules.M6}}<div class='tab-pane' data-pane='M6'>{{{modules.M6}}}</div>{{/if}}
+        {{#if modules.M3}}<div class='tab-pane' data-pane='M3'>{{{modules.M3}}}</div>{{/if}}
+        {{#if modules.E2}}<div class='tab-pane' data-pane='E2'>{{{modules.E2}}}</div>{{/if}}
       </div>
     </div>
   </article>
@@ -258,15 +283,34 @@ const MULTI_PATENT_TEMPLATE: &str = r##"<!DOCTYPE html>
 </div>
 
 <script>
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const container = btn.closest('.tab-container');
-    container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    container.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+(function(){
+  function switchTab(btn, tabId) {
+    var container = btn.closest('.tab-container');
+    var btns = container.querySelectorAll('.tab-btn');
+    var panes = container.querySelectorAll('.tab-pane');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+    for (var i = 0; i < panes.length; i++) panes[i].classList.remove('active');
     btn.classList.add('active');
-    container.querySelector('#tab-' + btn.dataset.tab).classList.add('active');
-  });
-});
+    for (var i = 0; i < panes.length; i++) {
+      if (panes[i].getAttribute('data-pane') === tabId) {
+        panes[i].classList.add('active');
+      }
+    }
+  }
+  var allBtns = document.querySelectorAll('.tab-btn');
+  for (var i = 0; i < allBtns.length; i++) {
+    allBtns[i].addEventListener('click', function() {
+      switchTab(this, this.getAttribute('data-tab'));
+    });
+  }
+  var containers = document.querySelectorAll('.tab-container');
+  for (var c = 0; c < containers.length; c++) {
+    var firstBtn = containers[c].querySelector('.tab-btn');
+    var firstPane = containers[c].querySelector('.tab-pane');
+    if (firstBtn) firstBtn.classList.add('active');
+    if (firstPane) firstPane.classList.add('active');
+  }
+})();
 </script>
 </body>
 </html>"##;

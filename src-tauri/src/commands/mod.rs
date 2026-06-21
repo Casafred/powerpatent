@@ -699,6 +699,7 @@ fn json_to_module_html(module_id: &str, data: &serde_json::Value) -> String {
         "M6" => render_m6(data),
         "M7" => render_m7(data),
         "M8" => render_m8(data),
+        "E2" => render_e2(data),
         _ => json_to_generic_html(data),
     }
 }
@@ -949,6 +950,56 @@ fn render_m8(data: &serde_json::Value) -> String {
             html.push_str(&format!("<tr><td>{}</td><td>{}</td></tr>", escape_html(patent), escape_html(diff)));
         }
         html.push_str("</table>");
+    }
+    html.push_str("</div>");
+    html
+}
+
+fn render_e2(data: &serde_json::Value) -> String {
+    let mut html = String::from("<div class='figures-section'>");
+    if let Some(figures) = data.get("figures").and_then(|v| v.as_array()) {
+        for fig in figures {
+            let fig_num = fig.get("figure_number")
+                .or_else(|| fig.get("figureNumber"))
+                .and_then(|v| v.as_str()).unwrap_or("");
+            let title = fig.get("title").and_then(|v| v.as_str()).unwrap_or("");
+            let desc = fig.get("description").and_then(|v| v.as_str()).unwrap_or("");
+            let summary = fig.get("summary").and_then(|v| v.as_str()).unwrap_or("");
+
+            html.push_str(&format!(
+                "<div class='figure-card'><div class='figure-header'><span class='figure-num'>{}</span><span class='figure-title'>{}</span></div>",
+                escape_html(fig_num), escape_html(title)
+            ));
+            if !desc.is_empty() {
+                html.push_str(&format!("<p class='figure-desc'>{}</p>", escape_html(desc)));
+            }
+            if let Some(elements) = fig.get("key_elements").or_else(|| fig.get("keyElements")).and_then(|v| v.as_array()) {
+                if !elements.is_empty() {
+                    html.push_str("<table class='element-table'><tr><th>标号</th><th>部件名称</th><th>关联权利要求</th><th>关联实施例</th></tr>");
+                    for el in elements {
+                        let label = el.get("label").and_then(|v| v.as_str()).unwrap_or("");
+                        let name = el.get("element_name").or_else(|| el.get("elementName")).and_then(|v| v.as_str()).unwrap_or("");
+                        let claim = el.get("related_claim").or_else(|| el.get("relatedClaim"))
+                            .map(|v| if v.is_number() { v.to_string() } else { v.as_str().unwrap_or("").to_string() })
+                            .unwrap_or_default();
+                        let embodiment = el.get("related_embodiment").or_else(|| el.get("relatedEmbodiment")).and_then(|v| v.as_str()).unwrap_or("");
+                        html.push_str(&format!(
+                            "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+                            escape_html(label), escape_html(name), escape_html(&claim), escape_html(embodiment)
+                        ));
+                    }
+                    html.push_str("</table>");
+                }
+            }
+            if !summary.is_empty() {
+                html.push_str(&format!("<p class='figure-summary'>{}</p>", escape_html(summary)));
+            }
+            html.push_str("</div>");
+        }
+    }
+    if html == "<div class='figures-section'>" {
+        // 没有附图数据，使用通用渲染
+        return json_to_generic_html(data);
     }
     html.push_str("</div>");
     html

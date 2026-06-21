@@ -6,7 +6,6 @@ import { useProjectStore } from '../stores/project'
 import { renderHtml, exportHtml } from '../services/tauri'
 import { useRouter } from 'vue-router'
 import { save } from '@tauri-apps/plugin-dialog'
-import { readFile } from '@tauri-apps/plugin-fs'
 import { ElNotification } from 'element-plus'
 
 const inputStore = useInputStore()
@@ -14,50 +13,20 @@ const configStore = useModuleConfigStore()
 const projectStore = useProjectStore()
 const router = useRouter()
 
-const embedPdf = ref(true)
 const exporting = ref(false)
 const previewHtml = ref('')
 const previewLoading = ref(false)
 
 const hasPatents = computed(() => inputStore.patents.length > 0)
 
-// 构建渲染配置（含 PDF base64 数据）
-async function buildModuleConfig() {
-  const config: any = {
+// 构建渲染配置
+function buildModuleConfig() {
+  return {
     mode: configStore.mode,
     theme_name: configStore.themeName || null,
     theme_description: configStore.themeDescription || null,
     patents: inputStore.patents,
   }
-
-  // 如果启用 PDF 内嵌，读取 PDF 文件转 base64
-  if (embedPdf.value) {
-    const pdfDataMap: Record<string, string> = {}
-    for (const patent of inputStore.patents) {
-      if (patent.pdfFilePath) {
-        try {
-          const data = await readFile(patent.pdfFilePath)
-          const base64 = arrayBufferToBase64(data)
-          const patentId = patent.publicationNumber || patent.applicationNumber || 'unknown'
-          pdfDataMap[patentId] = base64
-        } catch (e) {
-          console.warn('读取 PDF 失败:', patent.pdfFilePath, e)
-        }
-      }
-    }
-    config.pdf_base64_map = pdfDataMap
-  }
-
-  return config
-}
-
-function arrayBufferToBase64(buffer: Uint8Array): string {
-  let binary = ''
-  const len = buffer.byteLength
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(buffer[i])
-  }
-  return btoa(binary)
 }
 
 // 预览 HTML
@@ -65,11 +34,11 @@ async function handlePreview() {
   if (!hasPatents.value) return
   previewLoading.value = true
   try {
-    const config = await buildModuleConfig()
+    const config = buildModuleConfig()
     const html = await renderHtml({
       projectId: projectStore.projectId,
       moduleConfig: config,
-      embedPdf: embedPdf.value,
+      embedPdf: false,
     })
     previewHtml.value = html
   } catch (e: any) {
@@ -89,12 +58,12 @@ async function handleExport() {
 
     if (filePath) {
       exporting.value = true
-      const config = await buildModuleConfig()
+      const config = buildModuleConfig()
       await exportHtml({
         projectId: projectStore.projectId,
         outputPath: filePath,
         moduleConfig: config,
-        embedPdf: embedPdf.value,
+        embedPdf: false,
       })
       exporting.value = false
       ElNotification({ title: '导出成功', message: `文件已保存到 ${filePath}`, type: 'success' })
@@ -125,11 +94,7 @@ async function handleExport() {
     <!-- 导出配置 -->
     <div class="config-section">
       <h3>导出配置</h3>
-      <el-form label-position="left" label-width="120px" size="small">
-        <el-form-item label="内嵌 PDF 原文">
-          <el-switch v-model="embedPdf" />
-        </el-form-item>
-      </el-form>
+      <p class="export-hint">导出为离线自包含 HTML 文件，包含所有 AI 分析板块内容。PDF 原文请在桌面应用中查看。</p>
     </div>
 
     <!-- 专利概览 -->
@@ -155,7 +120,7 @@ async function handleExport() {
         </el-button>
       </div>
       <div v-if="previewHtml" class="preview-frame">
-        <iframe :srcdoc="previewHtml" class="preview-iframe" sandbox="allow-same-origin" />
+        <iframe :srcdoc="previewHtml" class="preview-iframe" sandbox="allow-scripts allow-same-origin" />
       </div>
       <div v-else class="preview-placeholder">
         <el-empty description="点击「生成预览」查看输出效果" />
@@ -208,6 +173,11 @@ async function handleExport() {
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 12px;
+}
+
+.export-hint {
+  color: var(--app-text-secondary);
+  font-size: 13px;
 }
 
 .preview-header {

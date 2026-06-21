@@ -150,6 +150,19 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Helvetica 
 /* PDF Embed */
 .pdf-embed-container { width: 100%; height: 600px; }
 .pdf-embed-iframe { width: 100%; height: 100%; border: none; }
+.pdf-notice { text-align: center; padding: 40px 20px; color: #909399; font-size: 14px; background: #fafbfc; border: 1px dashed #dcdfe6; border-radius: 8px; margin: 20px 0; }
+
+/* Figures (E2) */
+.figures-section { display: flex; flex-direction: column; gap: 16px; }
+.figure-card { padding: 16px; background: #fafbfc; border: 1px solid #ebeef5; border-radius: 8px; border-left: 3px solid #409eff; }
+.figure-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.figure-num { background: #409eff; color: #fff; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+.figure-title { font-size: 15px; font-weight: 600; color: #303133; }
+.figure-desc { font-size: 13px; color: #606266; line-height: 1.6; margin-bottom: 8px; }
+.figure-summary { font-size: 12px; color: #909399; font-style: italic; margin-top: 8px; padding: 6px 10px; background: #f5f7fa; border-radius: 4px; }
+.element-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.element-table th, .element-table td { padding: 6px 10px; border: 1px solid #ebeef5; font-size: 12px; }
+.element-table th { background: #f5f7fa; font-weight: 500; text-align: left; }
 
 /* Print */
 @media print { body { background: #fff; } .container { max-width: 100%; padding: 0; } .tab-pane { display: block !important; } .tab-nav { display: none; } }
