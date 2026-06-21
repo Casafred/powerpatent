@@ -11,6 +11,7 @@ import { getActiveProvider } from '../types/ai'
 import AnnotationPanel from '../components/annotation/AnnotationPanel.vue'
 import AnnotationSummary from '../components/annotation/AnnotationSummary.vue'
 import ModulePreview from '../components/ModulePreview.vue'
+import M1Editor from '../components/M1Editor.vue'
 import PdfViewer from '../components/PdfViewer.vue'
 import { useRouter } from 'vue-router'
 import { ElNotification } from 'element-plus'
@@ -37,6 +38,7 @@ interface ModuleState {
 const moduleStates = ref<ModuleState[]>([])
 const generating = ref(false)
 const currentModule = ref<string | null>(null)
+const m1Editing = ref(false) // M1 手动编辑模式
 
 // 需要展示的所有板块（含非 AI 模块）
 const allActiveModules = computed(() => {
@@ -226,6 +228,18 @@ function getStatusText(status: ModuleState['status']) {
 function goNext() {
   router.push({ name: 'export' })
 }
+
+// M1 手动编辑：更新专利数据
+function onM1Update(patentIndex: number, data: any) {
+  if (inputStore.patents[patentIndex]) {
+    inputStore.patents[patentIndex] = { ...inputStore.patents[patentIndex], ...data }
+  }
+}
+
+// 判断是否为仅 PDF 输入
+const isPdfOnly = computed(() => {
+  return inputStore.patents.some(p => p.source === 'pdf')
+})
 </script>
 
 <template>
@@ -297,6 +311,24 @@ function goNext() {
 
           <div v-if="mod.error" class="module-error">
             {{ mod.error }}
+          </div>
+
+          <!-- M1 手动编辑（仅 PDF 输入时） -->
+          <div v-if="mod.id === 'M1' && isPdfOnly" class="m1-manual-section">
+            <div class="m1-manual-header">
+              <el-button size="small" @click="m1Editing = !m1Editing">
+                {{ m1Editing ? '收起编辑' : '手动填写' }}
+              </el-button>
+              <span class="m1-hint">上传 PDF 后可手动补充或修正基本信息</span>
+            </div>
+            <div v-if="m1Editing" class="m1-editor-area">
+              <div v-for="(patent, pi) in inputStore.patents" :key="pi" class="m1-patent-block">
+                <div v-if="inputStore.patents.length > 1" class="m1-patent-label">
+                  专利 {{ pi + 1 }}: {{ patent.title || getPatentId(patent) }}
+                </div>
+                <M1Editor :model-value="patent" @update:model-value="onM1Update(pi, $event)" />
+              </div>
+            </div>
           </div>
 
           <!-- AI 输出预览 -->
@@ -528,6 +560,47 @@ function goNext() {
   border: 1px solid var(--app-border);
   border-radius: 6px;
   padding: 8px;
+}
+
+/* M1 手动编辑 */
+.m1-manual-section {
+  margin-top: 8px;
+}
+
+.m1-manual-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.m1-hint {
+  font-size: 12px;
+  color: var(--app-text-secondary);
+}
+
+.m1-editor-area {
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--app-card-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+}
+
+.m1-patent-block {
+  margin-bottom: 8px;
+}
+
+.m1-patent-block:last-child {
+  margin-bottom: 0;
+}
+
+.m1-patent-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--app-text-secondary);
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--app-border);
 }
 
 .view-footer {
