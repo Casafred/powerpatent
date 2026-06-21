@@ -840,10 +840,10 @@ fn render_m5(data: &serde_json::Value) -> String {
     if let Some(claims) = data.get("independent_claims").or_else(|| data.get("independentClaims")).and_then(|v| v.as_array()) {
         html.push_str("<h4>独立权利要求</h4>");
         for c in claims {
-            let num = c.get("claim_number").or_else(|| c.get("claimNumber")).and_then(|v| v.as_str()).unwrap_or("");
-            let text = c.get("claim_text").or_else(|| c.get("claimText")).and_then(|v| v.as_str()).unwrap_or("");
-            let scope = c.get("scope_summary").or_else(|| c.get("scopeSummary")).and_then(|v| v.as_str()).unwrap_or("");
-            html.push_str(&format!("<div class='claim-card'><div class='claim-num'>权利要求 {}</div><p class='claim-text'>{}</p>", escape_html(num), escape_html(text)));
+            let num = value_as_str(c, "claim_number", "claimNumber");
+            let text = value_as_str(c, "claim_text", "claimText");
+            let scope = value_as_str(c, "scope_summary", "scopeSummary");
+            html.push_str(&format!("<div class='claim-card'><div class='claim-num'>权利要求 {}</div><p class='claim-text'>{}</p>", escape_html(&num), escape_html(&text)));
             if let Some(features) = c.get("core_features").or_else(|| c.get("coreFeatures")).and_then(|v| v.as_array()) {
                 html.push_str("<div class='features'><strong>必要技术特征：</strong><ul>");
                 for f in features {
@@ -852,7 +852,7 @@ fn render_m5(data: &serde_json::Value) -> String {
                 html.push_str("</ul></div>");
             }
             if !scope.is_empty() {
-                html.push_str(&format!("<p class='scope-text'>{}</p>", escape_html(scope)));
+                html.push_str(&format!("<p class='scope-text'>{}</p>", escape_html(&scope)));
             }
             html.push_str("</div>");
         }
@@ -860,11 +860,16 @@ fn render_m5(data: &serde_json::Value) -> String {
     if let Some(claims) = data.get("dependent_claims").or_else(|| data.get("dependentClaims")).and_then(|v| v.as_array()) {
         html.push_str("<h4>从属权利要求</h4>");
         for c in claims {
-            let num = c.get("claim_number").or_else(|| c.get("claimNumber")).and_then(|v| v.as_str()).unwrap_or("");
-            let dep = c.get("depends_on").or_else(|| c.get("dependsOn")).and_then(|v| v.as_str()).unwrap_or("");
-            let lim = c.get("additional_limitation").or_else(|| c.get("additionalLimitation")).and_then(|v| v.as_str()).unwrap_or("");
-            html.push_str(&format!("<div class='claim-card dependent'><span>权利要求 {}（引用 {}）</span><p>{}</p></div>",
-                escape_html(num), escape_html(dep), escape_html(lim)));
+            let num = value_as_str(c, "claim_number", "claimNumber");
+            let dep = value_as_str(c, "depends_on", "dependsOn");
+            let lim = value_as_str(c, "additional_limitation", "additionalLimitation");
+            let narrowing = value_as_str(c, "scope_narrowing", "scopeNarrowing");
+            html.push_str(&format!("<div class='claim-card dependent'><div class='claim-num'>权利要求 {}（引用权利要求 {}）</div><p class='claim-text'>{}</p>",
+                escape_html(&num), escape_html(&dep), escape_html(&lim)));
+            if !narrowing.is_empty() {
+                html.push_str(&format!("<p class='scope-narrowing'>范围缩小：{}</p>", escape_html(&narrowing)));
+            }
+            html.push_str("</div>");
         }
     }
     html.push_str("</div>");
@@ -942,6 +947,18 @@ fn escape_html(s: &str) -> String {
      .replace('<', "&lt;")
      .replace('>', "&gt;")
      .replace('"', "&quot;")
+}
+
+/// 从 JSON 对象中取字段值，兼容 snake_case/camelCase，支持字符串和数字类型
+fn value_as_str(obj: &serde_json::Value, snake: &str, camel: &str) -> String {
+    obj.get(camel)
+        .or_else(|| obj.get(snake))
+        .map(|v| {
+            if v.is_string() { v.as_str().unwrap_or("").to_string() }
+            else if v.is_number() { v.to_string() }
+            else { v.to_string() }
+        })
+        .unwrap_or_default()
 }
 
 /// 导出 HTML 文件

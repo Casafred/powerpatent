@@ -112,6 +112,7 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Helvetica 
 .features strong { font-size: 12px; color: #909399; }
 .features ul { padding-left: 20px; font-size: 13px; margin-top: 4px; }
 .scope-text { font-size: 12px; color: #909399; font-style: italic; }
+.scope-narrowing { font-size: 12px; color: #e6a23c; margin-top: 4px; padding: 4px 8px; background: #fffbf0; border-radius: 4px; border-left: 2px solid #e6a23c; }
 
 /* Embodiments */
 .embodiments-section { display: flex; flex-direction: column; gap: 12px; }

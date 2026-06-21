@@ -1,13 +1,29 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
-import pdfjsWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?raw'
 import { readFile } from '@tauri-apps/plugin-fs'
 
-// Tauri 环境下 Worker 无法从自定义协议 URL 加载，
-// 使用 Blob URL 方式内联 worker 代码
-const workerBlob = new Blob([pdfjsWorkerSrc], { type: 'text/javascript' })
-pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(workerBlob)
+// Tauri 环境下 Worker 无法从自定义协议或 blob URL 加载
+// 使用 workerPort 方式：通过 Vite ?url import 获取 worker 文件的 http URL
+// 开发环境为 http://localhost:5173/...，打包后为 tauri://localhost/...
+// 这些 URL Worker 构造器可以正常加载
+let workerUrl: string
+try {
+  // Vite 会将 ?url import 解析为实际的资源 URL
+  workerUrl = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
+} catch {
+  workerUrl = ''
+}
+
+if (workerUrl) {
+  try {
+    const worker = new Worker(workerUrl, { type: 'module' })
+    pdfjsLib.GlobalWorkerOptions.workerPort = worker
+  } catch {
+    // Worker 创建失败，回退到主线程模式
+    pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+  }
+}
 
 const props = defineProps<{
   src: string
@@ -27,7 +43,11 @@ async function renderPdf() {
     // 通过 Tauri fs 读取文件为 Uint8Array
     const data = await readFile(props.src)
     const typedArray = new Uint8Array(data)
-    const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise
+    const pdf = await pdfjsLib.getDocument({
+      data: typedArray,
+      useWorkerFetch: false,
+      useSystemFonts: true,
+    }).promise
 
     const container = canvasContainer.value
     if (!container) return

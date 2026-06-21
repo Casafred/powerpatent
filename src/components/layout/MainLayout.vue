@@ -12,7 +12,7 @@ const currentStep = computed(() => {
 })
 
 function goToStep(step: number) {
-  const routes = ['input', 'config', 'ai', 'generate', 'export']
+  const routes = ['input', 'config', 'generate', 'export']
   const target = routes[step - 1]
   if (target) {
     router.push({ name: target })
