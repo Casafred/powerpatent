@@ -126,7 +126,7 @@ const SINGLE_PATENT_TEMPLATE: &str = r##"<!DOCTYPE html>
 <meta name='viewport' content='width=device-width, initial-scale=1.0'>
 <title>{{patents.0.title}} - 专利解读</title>
 <style>
-{{> inline_css}}
+{{{inline_css}}}
 </style>
 </head>
 <body>
@@ -203,7 +203,7 @@ const MULTI_PATENT_TEMPLATE: &str = r##"<!DOCTYPE html>
 <meta name='viewport' content='width=device-width, initial-scale=1.0'>
 <title>{{theme_name}} - 专利解读</title>
 <style>
-{{> inline_css}}
+{{{inline_css}}}
 </style>
 </head>
 <body>
