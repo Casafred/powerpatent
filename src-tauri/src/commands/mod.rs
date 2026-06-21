@@ -526,6 +526,7 @@ pub async fn get_cached_module(
 /// 板块重跑
 #[tauri::command]
 pub async fn rerun_module(
+    app_handle: tauri::AppHandle,
     project_id: String,
     patent_id: String,
     module_id: String,
@@ -541,7 +542,7 @@ pub async fn rerun_module(
     let patent_data = options.get("patent_data").cloned().unwrap_or(serde_json::json!({}));
     let level = options.get("level").and_then(|v| v.as_str()).unwrap_or("full").to_string();
 
-    generate_module(project_id, patent_id, module_id, level, provider, patent_data).await
+    generate_module(app_handle, project_id, patent_id, module_id, level, provider, patent_data).await
 }
 
 /// HTML 渲染
