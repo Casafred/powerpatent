@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, nextTick } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 import { readFile } from '@tauri-apps/plugin-fs'
 
@@ -42,7 +42,7 @@ async function renderPdf() {
 
   try {
     const data = await readFile(props.src)
-    const typedArray = new Uint8Array(data as ArrayBuffer)
+    const typedArray = new Uint8Array(data.buffer ? data.buffer as ArrayBuffer : data as unknown as ArrayBuffer)
 
     const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise
     pageInfo.value = `共 ${pdf.numPages} 页`
