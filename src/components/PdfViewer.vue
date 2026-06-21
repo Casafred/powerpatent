@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
+import { readFile } from '@tauri-apps/plugin-fs'
 
-// 设置 worker 路径
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.mjs',
-  import.meta.url
-).toString()
+// 禁用 worker，使用主线程渲染（Tauri 环境下 worker 加载不稳定）
+pdfjsLib.GlobalWorkerOptions.workerSrc = ''
 
 const props = defineProps<{
   src: string
@@ -23,7 +21,13 @@ async function renderPdf() {
   error.value = null
 
   try {
-    const pdf = await pdfjsLib.getDocument({ url: props.src }).promise
+    let pdf: pdfjsLib.PDFDocumentProxy
+
+    // 直接通过 Tauri fs 读取文件为 ArrayBuffer
+    const data = await readFile(props.src)
+    const typedArray = new Uint8Array(data)
+    pdf = await pdfjsLib.getDocument({ data: typedArray }).promise
+
     const container = canvasContainer.value
     if (!container) return
 

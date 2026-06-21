@@ -49,12 +49,12 @@ export async function generateModule(params: {
   patentData: any
 }): Promise<any> {
   return safeInvoke('generate_module', {
-    project_id: params.projectId,
-    patent_id: params.patentId,
-    module_id: params.moduleId,
+    projectId: params.projectId,
+    patentId: params.patentId,
+    moduleId: params.moduleId,
     level: params.level,
     provider: params.provider,
-    patent_data: params.patentData,
+    patentData: params.patentData,
   })
 }
 
@@ -65,9 +65,9 @@ export async function getCachedModule(params: {
   moduleId: string
 }): Promise<any> {
   return safeInvoke('get_cached_module', {
-    project_id: params.projectId,
-    patent_id: params.patentId,
-    module_id: params.moduleId,
+    projectId: params.projectId,
+    patentId: params.patentId,
+    moduleId: params.moduleId,
   })
 }
 
@@ -79,9 +79,9 @@ export async function rerunModule(params: {
   options: any
 }): Promise<any> {
   return safeInvoke('rerun_module', {
-    project_id: params.projectId,
-    patent_id: params.patentId,
-    module_id: params.moduleId,
+    projectId: params.projectId,
+    patentId: params.patentId,
+    moduleId: params.moduleId,
     options: params.options,
   })
 }
@@ -93,9 +93,9 @@ export async function renderHtml(params: {
   embedPdf: boolean
 }): Promise<string> {
   return safeInvoke('render_html', {
-    project_id: params.projectId,
-    module_config: params.moduleConfig,
-    embed_pdf: params.embedPdf,
+    projectId: params.projectId,
+    moduleConfig: params.moduleConfig,
+    embedPdf: params.embedPdf,
   })
 }
 
@@ -107,10 +107,10 @@ export async function exportHtml(params: {
   embedPdf: boolean
 }): Promise<void> {
   return safeInvoke('export_html', {
-    project_id: params.projectId,
-    output_path: params.outputPath,
-    module_config: params.moduleConfig,
-    embed_pdf: params.embedPdf,
+    projectId: params.projectId,
+    outputPath: params.outputPath,
+    moduleConfig: params.moduleConfig,
+    embedPdf: params.embedPdf,
   })
 }
 

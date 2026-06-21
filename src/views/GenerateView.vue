@@ -12,7 +12,6 @@ import AnnotationPanel from '../components/annotation/AnnotationPanel.vue'
 import AnnotationSummary from '../components/annotation/AnnotationSummary.vue'
 import ModulePreview from '../components/ModulePreview.vue'
 import PdfViewer from '../components/PdfViewer.vue'
-import { convertFileSrc } from '@tauri-apps/api/core'
 import { useRouter } from 'vue-router'
 import { ElNotification } from 'element-plus'
 
@@ -67,14 +66,9 @@ function initModuleStates() {
   }))
 }
 
-// 获取 PDF 可访问 URL
+// 获取 PDF 文件路径（直接传给 PdfViewer，由其通过 Tauri fs 读取）
 function getPdfSrc(patent: any): string {
-  if (!patent?.pdfFilePath) return ''
-  try {
-    return convertFileSrc(patent.pdfFilePath)
-  } catch {
-    return ''
-  }
+  return patent?.pdfFilePath || ''
 }
 
 function getPatentId(patent: any): string {
