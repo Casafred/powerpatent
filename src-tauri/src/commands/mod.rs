@@ -14,6 +14,8 @@ use std::path::PathBuf;
 use tauri::Manager;
 /// 板块 ID → Prompt 模板 ID 映射
 const MODULE_PROMPT_MAP: &[(&str, &str)] = &[
+    ("M1", "m1_basic_info"),
+    ("M2", "m2_legal_status"),
     ("M3", "m3_family"),
     ("M4", "m4_summary"),
     ("M5", "m5_claims"),
@@ -405,7 +407,7 @@ pub async fn generate_module(
     let prompt_id = match prompt_id {
         Some(id) => id,
         None => {
-            // M1/M2 不需要 AI 生成，直接返回元信息
+            // 无对应 prompt 模板的板块，直接返回原始数据
             return Ok(serde_json::json!({
                 "module_id": module_id,
                 "patent_id": patent_id,
@@ -446,7 +448,35 @@ pub async fn generate_module(
         result
     }
 
+    // 拼接专利全文（供 M1/M2 的 full_text 字段使用）
+    let full_text = {
+        let mut parts = Vec::new();
+        if let Some(v) = data_obj.get("title").and_then(|v| v.as_str()) {
+            if !v.is_empty() { parts.push(format!("标题: {}", v)); }
+        }
+        if let Some(v) = data_obj.get("abstractText").and_then(|v| v.as_str()) {
+            if !v.is_empty() { parts.push(format!("摘要: {}", v)); }
+        }
+        if let Some(v) = data_obj.get("claimsText").and_then(|v| v.as_str()) {
+            if !v.is_empty() { parts.push(format!("权利要求书: {}", v)); }
+        }
+        if let Some(v) = data_obj.get("descriptionText").and_then(|v| v.as_str()) {
+            if !v.is_empty() { parts.push(format!("说明书: {}", v)); }
+        }
+        parts.join("\n\n")
+    };
+
     for field in &template.input_fields {
+        // 特殊处理：full_text 字段使用拼接的全文
+        if field == "full_text" {
+            if full_text.is_empty() {
+                template_data.insert(field.clone(), "(未提供)".to_string());
+            } else {
+                template_data.insert(field.clone(), full_text.clone());
+            }
+            continue;
+        }
+
         // prompt 模板中 input_fields 使用 snake_case，但前端 JSON key 是 camelCase
         let camel_key = snake_to_camel(field);
         let value = data_obj.get(&camel_key)

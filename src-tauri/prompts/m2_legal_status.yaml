@@ -1,0 +1,49 @@
+id: m2_legal_status
+name: 法律状态与关键日期
+description: 从专利全文中抽取法律状态和关键日期信息
+model_hint: fast
+temperature: 0.1
+input_fields:
+  - full_text
+output_schema:
+  type: object
+  properties:
+    legal_status:
+      type: string
+    grant_date:
+      type: string
+    priority_date:
+      type: string
+    key_dates:
+      type: array
+      items:
+        type: object
+        properties:
+          event:
+            type: string
+          date:
+            type: string
+prompt_template: |
+  你是一位专业的专利分析师。请从以下专利全文中抽取法律状态与关键日期信息。
+
+  ## 专利全文
+
+  {{full_text}}
+
+  ## 输出要求
+
+  请严格按以下 JSON 格式输出，不要输出任何其他内容。如果某字段无法从文本中识别，请填空字符串：
+
+  ```json
+  {
+    "legal_status": "当前法律状态（授权/实质审查/失效/撤回等）",
+    "grant_date": "授权日期（YYYY-MM-DD格式，如已授权）",
+    "priority_date": "优先权日期（YYYY-MM-DD格式）",
+    "key_dates": [
+      {
+        "event": "事件描述（如：申请、公开、授权、缴费等）",
+        "date": "日期（YYYY-MM-DD格式）"
+      }
+    ]
+  }
+  ```

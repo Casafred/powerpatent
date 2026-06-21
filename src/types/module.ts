@@ -34,8 +34,8 @@ export interface ModuleMeta {
 
 /** 所有板块元信息 */
 export const MODULE_REGISTRY: ModuleMeta[] = [
-  { id: 'M1', name: '专利基本信息', required: true, aiGenerated: false, description: '著录信息' },
-  { id: 'M2', name: '法律状态与关键日期', required: true, aiGenerated: false, description: '时间轴' },
+  { id: 'M1', name: '专利基本信息', required: true, aiGenerated: true, description: '著录信息' },
+  { id: 'M2', name: '法律状态与关键日期', required: true, aiGenerated: true, description: '时间轴' },
   { id: 'M3', name: '同族保护情况', required: true, aiGenerated: true, description: '同族概要' },
   { id: 'M4', name: '一句话概要', required: true, aiGenerated: true, description: '问题/手段/效果' },
   { id: 'M5', name: '权利要求范围解读', required: true, aiGenerated: true, description: '权要树+解读' },
