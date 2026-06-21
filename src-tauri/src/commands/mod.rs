@@ -617,20 +617,15 @@ pub async fn render_html(
     let entries = cache.list_project(&project_id)
         .map_err(|e| format!("查询缓存失败: {}", e))?;
 
-    // 2. 构建板块输出映射
+    // 2. 构建板块输出映射（AI 输出 JSON → 格式化 HTML）
     let mut modules: HashMap<String, serde_json::Value> = HashMap::new();
     for entry in &entries {
         let output: serde_json::Value = serde_json::from_str(&entry.output_json)
             .unwrap_or(serde_json::json!({}));
         let key = format!("{}_{}", entry.patent_id, entry.module_id);
 
-        // 为板块渲染 HTML 子模板
-        let renderer = crate::render::template::HtmlRenderer::new()
-            .map_err(|e| format!("创建渲染器失败: {}", e))?;
-
-        let rendered = renderer.render_module(&entry.module_id, &output)
-            .unwrap_or_default();
-
+        // 将 AI 输出 JSON 渲染为格式化 HTML
+        let rendered = json_to_module_html(&entry.module_id, &output);
         modules.insert(key, serde_json::Value::String(rendered));
     }
 
@@ -644,26 +639,7 @@ pub async fn render_html(
         return Err("没有专利数据可供渲染".to_string());
     }
 
-    // 4. 为非 AI 板块（M1/M2）也渲染子模板
-    let renderer = crate::render::template::HtmlRenderer::new()
-        .map_err(|e| format!("创建渲染器失败: {}", e))?;
-
-    let mut all_modules = modules.clone();
-    for patent in &patents {
-        let patent_id = patent.get("publication_number")
-            .or_else(|| patent.get("application_number"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown");
-
-        // M1 基本信息
-        if let Ok(rendered) = renderer.render_module("M1", patent) {
-            all_modules.insert(format!("{}_M1", patent_id), serde_json::Value::String(rendered));
-        }
-        // M2 法律状态
-        if let Ok(rendered) = renderer.render_module("M2", patent) {
-            all_modules.insert(format!("{}_M2", patent_id), serde_json::Value::String(rendered));
-        }
-    }
+    // 4. M1/M2 现在也走 AI 生成，已在缓存中，无需额外处理
 
     // 5. 构建渲染数据
     let mode = module_config.get("mode")
@@ -675,7 +651,7 @@ pub async fn render_html(
         .and_then(|v| v.as_str());
 
     let render_data = crate::render::template::build_render_data(
-        &patents, &all_modules, mode, theme_name, theme_description,
+        &patents, &modules, mode, theme_name, theme_description,
     );
 
     // 6. 注入内联 CSS
@@ -688,6 +664,9 @@ pub async fn render_html(
     let final_data = serde_json::Value::Object(data_obj);
 
     // 7. 渲染 HTML
+    let renderer = crate::render::template::HtmlRenderer::new()
+        .map_err(|e| format!("创建渲染器失败: {}", e))?;
+
     let html = if mode == "multi" {
         renderer.render_multi(&final_data)
     } else {
@@ -695,6 +674,274 @@ pub async fn render_html(
     }.map_err(|e| format!("渲染 HTML 失败: {}", e))?;
 
     Ok(html)
+}
+
+/// 将 AI 输出 JSON 转换为格式化的板块 HTML
+fn json_to_module_html(module_id: &str, data: &serde_json::Value) -> String {
+    match module_id {
+        "M1" => render_m1(data),
+        "M2" => render_m2(data),
+        "M3" => render_m3(data),
+        "M4" => render_m4(data),
+        "M5" => render_m5(data),
+        "M6" => render_m6(data),
+        "M7" => render_m7(data),
+        "M8" => render_m8(data),
+        _ => json_to_generic_html(data),
+    }
+}
+
+/// 通用 JSON → HTML 渲染（递归）
+fn json_to_generic_html(data: &serde_json::Value) -> String {
+    match data {
+        serde_json::Value::Object(map) => {
+            let mut rows = String::new();
+            for (key, val) in map {
+                let val_html = match val {
+                    serde_json::Value::String(s) => escape_html(s),
+                    serde_json::Value::Number(n) => n.to_string(),
+                    serde_json::Value::Bool(b) => b.to_string(),
+                    serde_json::Value::Null => String::new(),
+                    _ => json_to_generic_html(val),
+                };
+                rows.push_str(&format!(
+                    "<div class='field-row'><span class='field-label'>{}</span><span class='field-value'>{}</span></div>",
+                    escape_html(key), val_html
+                ));
+            }
+            format!("<div class='field-group'>{}</div>", rows)
+        }
+        serde_json::Value::Array(arr) => {
+            let items: Vec<String> = arr.iter().map(|v| format!("<div class='list-item'>{}</div>", json_to_generic_html(v))).collect();
+            format!("<div class='list-group'>{}</div>", items.join(""))
+        }
+        serde_json::Value::String(s) => format!("<p>{}</p>", escape_html(s)),
+        _ => format!("<p>{}</p>", data),
+    }
+}
+
+fn render_m1(data: &serde_json::Value) -> String {
+    let fields = [
+        ("publication_number", "公开号"),
+        ("grant_number", "授权号"),
+        ("application_number", "申请号"),
+        ("applicant", "申请人"),
+        ("inventor", "发明人"),
+        ("title", "发明名称"),
+        ("filing_date", "申请日"),
+        ("publication_date", "公开日"),
+        ("grant_date", "授权日"),
+        ("ipc", "IPC分类号"),
+        ("cpc", "CPC分类号"),
+    ];
+    let mut rows = String::new();
+    for (key, label) in &fields {
+        if let Some(v) = data.get(key).and_then(|v| v.as_str()) {
+            if !v.is_empty() {
+                rows.push_str(&format!("<tr><th>{}</th><td>{}</td></tr>", label, escape_html(v)));
+            }
+        }
+    }
+    // abstract
+    if let Some(v) = data.get("abstract_text").or_else(|| data.get("abstractText")).and_then(|v| v.as_str()) {
+        if !v.is_empty() {
+            rows.push_str(&format!("<tr><th>摘要</th><td class='abstract-text'>{}</td></tr>", escape_html(v)));
+        }
+    }
+    if rows.is_empty() {
+        json_to_generic_html(data)
+    } else {
+        format!("<table class='info-table'>{}</table>", rows)
+    }
+}
+
+fn render_m2(data: &serde_json::Value) -> String {
+    let mut html = String::from("<div class='legal-status'>");
+    let status = data.get("legal_status").or_else(|| data.get("legalStatus")).and_then(|v| v.as_str()).unwrap_or("");
+    if !status.is_empty() {
+        html.push_str(&format!("<div class='status-badge'>{}</div>", escape_html(status)));
+    }
+    let date_fields = [
+        ("filing_date", "申请日"), ("publication_date", "公开日"),
+        ("grant_date", "授权日"), ("priority_date", "优先权日"),
+    ];
+    let mut timeline = String::new();
+    for (key, label) in &date_fields {
+        if let Some(v) = data.get(key).and_then(|v| v.as_str()) {
+            if !v.is_empty() {
+                timeline.push_str(&format!("<div class='timeline-item'><span class='timeline-label'>{}</span><span class='timeline-date'>{}</span></div>", label, escape_html(v)));
+            }
+        }
+    }
+    if !timeline.is_empty() {
+        html.push_str(&format!("<div class='timeline'>{}</div>", timeline));
+    }
+    // key_dates
+    if let Some(dates) = data.get("key_dates").or_else(|| data.get("keyDates")).and_then(|v| v.as_array()) {
+        html.push_str("<div class='key-dates'><h4>关键日期</h4>");
+        for d in dates {
+            let event = d.get("event").and_then(|v| v.as_str()).unwrap_or("");
+            let date = d.get("date").and_then(|v| v.as_str()).unwrap_or("");
+            if !event.is_empty() || !date.is_empty() {
+                html.push_str(&format!("<div class='key-date-item'><span>{}</span><span>{}</span></div>", escape_html(event), escape_html(date)));
+            }
+        }
+        html.push_str("</div>");
+    }
+    html.push_str("</div>");
+    html
+}
+
+fn render_m3(data: &serde_json::Value) -> String {
+    let mut html = String::from("<div class='family-section'>");
+    if let Some(v) = data.get("family_overview").or_else(|| data.get("familyOverview")).and_then(|v| v.as_str()) {
+        html.push_str(&format!("<p class='overview-text'>{}</p>", escape_html(v)));
+    }
+    if let Some(jurisdictions) = data.get("key_jurisdictions").or_else(|| data.get("keyJurisdictions")).and_then(|v| v.as_array()) {
+        html.push_str("<table class='info-table'><tr><th>国家/地区</th><th>状态</th><th>范围差异</th></tr>");
+        for j in jurisdictions {
+            let country = j.get("country").and_then(|v| v.as_str()).unwrap_or("");
+            let status = j.get("status").and_then(|v| v.as_str()).unwrap_or("");
+            let scope = j.get("scope_difference").or_else(|| j.get("scopeDifference")).and_then(|v| v.as_str()).unwrap_or("");
+            html.push_str(&format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>",
+                escape_html(country), escape_html(status), escape_html(scope)));
+        }
+        html.push_str("</table>");
+    }
+    html.push_str("</div>");
+    html
+}
+
+fn render_m4(data: &serde_json::Value) -> String {
+    let mut html = String::from("<div class='summary-section'>");
+    let items = [
+        ("technical_problem", "技术问题"),
+        ("technical_means", "技术手段"),
+        ("technical_effect", "技术效果"),
+    ];
+    for (key, label) in &items {
+        if let Some(v) = data.get(key).and_then(|v| v.as_str()) {
+            if !v.is_empty() {
+                html.push_str(&format!("<div class='summary-item'><div class='summary-label'>{}</div><div class='summary-value'>{}</div></div>", label, escape_html(v)));
+            }
+        }
+    }
+    if let Some(v) = data.get("one_line_summary").or_else(|| data.get("oneLineSummary")).and_then(|v| v.as_str()) {
+        if !v.is_empty() {
+            html.push_str(&format!("<div class='one-line-summary'>{}</div>", escape_html(v)));
+        }
+    }
+    html.push_str("</div>");
+    html
+}
+
+fn render_m5(data: &serde_json::Value) -> String {
+    let mut html = String::from("<div class='claims-section'>");
+    if let Some(claims) = data.get("independent_claims").or_else(|| data.get("independentClaims")).and_then(|v| v.as_array()) {
+        html.push_str("<h4>独立权利要求</h4>");
+        for c in claims {
+            let num = c.get("claim_number").or_else(|| c.get("claimNumber")).and_then(|v| v.as_str()).unwrap_or("");
+            let text = c.get("claim_text").or_else(|| c.get("claimText")).and_then(|v| v.as_str()).unwrap_or("");
+            let scope = c.get("scope_summary").or_else(|| c.get("scopeSummary")).and_then(|v| v.as_str()).unwrap_or("");
+            html.push_str(&format!("<div class='claim-card'><div class='claim-num'>权利要求 {}</div><p class='claim-text'>{}</p>", escape_html(num), escape_html(text)));
+            if let Some(features) = c.get("core_features").or_else(|| c.get("coreFeatures")).and_then(|v| v.as_array()) {
+                html.push_str("<div class='features'><strong>必要技术特征：</strong><ul>");
+                for f in features {
+                    if let Some(s) = f.as_str() { html.push_str(&format!("<li>{}</li>", escape_html(s))); }
+                }
+                html.push_str("</ul></div>");
+            }
+            if !scope.is_empty() {
+                html.push_str(&format!("<p class='scope-text'>{}</p>", escape_html(scope)));
+            }
+            html.push_str("</div>");
+        }
+    }
+    if let Some(claims) = data.get("dependent_claims").or_else(|| data.get("dependentClaims")).and_then(|v| v.as_array()) {
+        html.push_str("<h4>从属权利要求</h4>");
+        for c in claims {
+            let num = c.get("claim_number").or_else(|| c.get("claimNumber")).and_then(|v| v.as_str()).unwrap_or("");
+            let dep = c.get("depends_on").or_else(|| c.get("dependsOn")).and_then(|v| v.as_str()).unwrap_or("");
+            let lim = c.get("additional_limitation").or_else(|| c.get("additionalLimitation")).and_then(|v| v.as_str()).unwrap_or("");
+            html.push_str(&format!("<div class='claim-card dependent'><span>权利要求 {}（引用 {}）</span><p>{}</p></div>",
+                escape_html(num), escape_html(dep), escape_html(lim)));
+        }
+    }
+    html.push_str("</div>");
+    html
+}
+
+fn render_m6(data: &serde_json::Value) -> String {
+    let mut html = String::from("<div class='embodiments-section'>");
+    if let Some(embs) = data.get("embodiments").and_then(|v| v.as_array()) {
+        for e in embs {
+            let name = e.get("name").and_then(|v| v.as_str()).unwrap_or("实施例");
+            let solution = e.get("solution").and_then(|v| v.as_str()).unwrap_or("");
+            html.push_str(&format!("<div class='embodiment-card'><h4>{}</h4><p>{}</p>", escape_html(name), escape_html(solution)));
+            if let Some(params) = e.get("key_parameters").or_else(|| e.get("keyParameters")).and_then(|v| v.as_array()) {
+                html.push_str("<table class='param-table'><tr><th>参数</th><th>值</th></tr>");
+                for p in params {
+                    let pn = p.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                    let pv = p.get("value").and_then(|v| v.as_str()).unwrap_or("");
+                    html.push_str(&format!("<tr><td>{}</td><td>{}</td></tr>", escape_html(pn), escape_html(pv)));
+                }
+                html.push_str("</table>");
+            }
+            if let Some(adv) = e.get("advantages").and_then(|v| v.as_str()) {
+                html.push_str(&format!("<p class='advantage'>{}</p>", escape_html(adv)));
+            }
+            html.push_str("</div>");
+        }
+    }
+    html.push_str("</div>");
+    html
+}
+
+fn render_m7(data: &serde_json::Value) -> String {
+    let mut html = String::from("<div class='alternatives-section'>");
+    if let Some(alts) = data.get("alternatives").and_then(|v| v.as_array()) {
+        for a in alts {
+            let desc = a.get("description").and_then(|v| v.as_str()).unwrap_or("");
+            html.push_str(&format!("<div class='alternative-card'><p>{}</p>", escape_html(desc)));
+            if let Some(claims) = a.get("related_claims").or_else(|| a.get("relatedClaims")).and_then(|v| v.as_array()) {
+                let claim_strs: Vec<String> = claims.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect();
+                if !claim_strs.is_empty() {
+                    html.push_str(&format!("<p class='related'>相关权利要求：{}</p>", escape_html(&claim_strs.join(", "))));
+                }
+            }
+            if let Some(scope) = a.get("potential_scope").or_else(|| a.get("potentialScope")).and_then(|v| v.as_str()) {
+                html.push_str(&format!("<p class='scope'>{}</p>", escape_html(scope)));
+            }
+            html.push_str("</div>");
+        }
+    }
+    html.push_str("</div>");
+    html
+}
+
+fn render_m8(data: &serde_json::Value) -> String {
+    let mut html = String::from("<div class='family-diff-section'>");
+    if let Some(v) = data.get("overview").and_then(|v| v.as_str()) {
+        html.push_str(&format!("<p class='overview-text'>{}</p>", escape_html(v)));
+    }
+    if let Some(diffs) = data.get("differences").and_then(|v| v.as_array()) {
+        html.push_str("<table class='info-table'><tr><th>专利</th><th>差异</th></tr>");
+        for d in diffs {
+            let patent = d.get("patent").or_else(|| d.get("publication_number")).and_then(|v| v.as_str()).unwrap_or("");
+            let diff = d.get("difference").or_else(|| d.get("scope_difference")).and_then(|v| v.as_str()).unwrap_or("");
+            html.push_str(&format!("<tr><td>{}</td><td>{}</td></tr>", escape_html(patent), escape_html(diff)));
+        }
+        html.push_str("</table>");
+    }
+    html.push_str("</div>");
+    html
+}
+
+fn escape_html(s: &str) -> String {
+    s.replace('&', "&amp;")
+     .replace('<', "&lt;")
+     .replace('>', "&gt;")
+     .replace('"', "&quot;")
 }
 
 /// 导出 HTML 文件
