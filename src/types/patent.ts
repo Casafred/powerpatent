@@ -21,6 +21,7 @@ export interface PatentData {
   pdfBase64?: string
   source: InputSource
   needsOcr?: boolean
+  pdfFilePath?: string
 }
 
 export interface FamilyMember {

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useProjectStore = defineStore('project', () => {
-  const projectId = ref(crypto.randomUUID())
+  const projectId = ref<string>(crypto.randomUUID())
   const projectName = ref('')
 
   function newProject() {

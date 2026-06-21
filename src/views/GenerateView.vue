@@ -4,7 +4,6 @@ import { useInputStore } from '../stores/input'
 import { useModuleConfigStore } from '../stores/moduleConfig'
 import { useAIConfigStore } from '../stores/aiConfig'
 import { useProjectStore } from '../stores/project'
-import { useAnnotationStore } from '../stores/annotation'
 import { useHistoryStore } from '../stores/history'
 import { generateModule, getCachedModule, rerunModule } from '../services/tauri'
 import { MODULE_REGISTRY, type ModuleId, type ModuleLevel } from '../types/module'
@@ -21,7 +20,6 @@ const inputStore = useInputStore()
 const configStore = useModuleConfigStore()
 const aiConfigStore = useAIConfigStore()
 const projectStore = useProjectStore()
-const annotationStore = useAnnotationStore()
 const historyStore = useHistoryStore()
 const router = useRouter()
 
