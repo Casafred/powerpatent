@@ -429,11 +429,38 @@ pub async fn generate_module(
     let empty_map = serde_json::Map::new();
     let data_obj = patent_data.as_object().unwrap_or(&empty_map);
 
+    // 将 snake_case 转为 camelCase（如 abstract_text → abstractText）
+    fn snake_to_camel(s: &str) -> String {
+        let mut result = String::new();
+        let mut upper = false;
+        for c in s.chars() {
+            if c == '_' {
+                upper = true;
+            } else if upper {
+                result.push(c.to_ascii_uppercase());
+                upper = false;
+            } else {
+                result.push(c);
+            }
+        }
+        result
+    }
+
     for field in &template.input_fields {
-        let value = data_obj.get(field)
-            .and_then(|v| v.as_str())
-            .unwrap_or("(未提供)");
-        template_data.insert(field.clone(), value.to_string());
+        // prompt 模板中 input_fields 使用 snake_case，但前端 JSON key 是 camelCase
+        let camel_key = snake_to_camel(field);
+        let value = data_obj.get(&camel_key)
+            .or_else(|| data_obj.get(field))
+            .and_then(|v| {
+                // 优先取字符串值，否则将整个 JSON 值序列化为字符串
+                if v.is_string() {
+                    v.as_str().map(|s| s.to_string())
+                } else {
+                    Some(serde_json::to_string(v).unwrap_or_default())
+                }
+            })
+            .unwrap_or_else(|| "(未提供)".to_string());
+        template_data.insert(field.clone(), value);
     }
 
     // 4. 渲染 Prompt

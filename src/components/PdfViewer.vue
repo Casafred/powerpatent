@@ -3,8 +3,11 @@ import { ref, watch, onMounted } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 import { readFile } from '@tauri-apps/plugin-fs'
 
-// 禁用 worker，使用主线程渲染（Tauri 环境下 worker 加载不稳定）
-pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+// 设置 worker 路径（Vite 会处理 URL）
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString()
 
 const props = defineProps<{
   src: string
