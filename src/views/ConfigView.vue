@@ -65,7 +65,7 @@ function togglePatentExpand(patentId: string) {
       v-if="inputStore.patents.length === 0"
       type="info"
       title="尚未输入专利数据"
-      description="您可以直接配置板块选项，也可以先前往"输入材料"页面上传专利文件"
+      :description="'您可以直接配置板块选项，也可以先前往「输入材料」页面上传专利文件'"
       show-icon
       :closable="false"
       style="margin-bottom: 16px"

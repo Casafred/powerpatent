@@ -9,7 +9,7 @@ const props = defineProps<{
 const annotationStore = useAnnotationStore()
 
 const groupedAnnotations = computed(() => {
-  const annotations = annotationStore.getAnnotationsByPatent(props.patentId)
+  const annotations = annotationStore.getAnnotations(props.patentId)
   const groups: Record<string, typeof annotations> = {}
   for (const a of annotations) {
     const key = a.moduleId || 'general'

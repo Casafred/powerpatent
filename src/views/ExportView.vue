@@ -84,7 +84,7 @@ async function handleExport() {
       v-if="!hasPatents"
       type="info"
       title="尚未生成分析内容"
-      description="请先前往"输入材料"上传专利，再在"生成与重跑"中完成 AI 分析"
+      :description="'请先前往「输入材料」上传专利，再在「生成与重跑」中完成 AI 分析'"
       show-icon
       :closable="false"
       style="margin-bottom: 16px"
