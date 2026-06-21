@@ -147,6 +147,10 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Helvetica 
 /* Footer */
 .footer { text-align: center; padding: 24px 0; color: #c0c4cc; font-size: 12px; border-top: 1px solid #e4e7ed; margin-top: 24px; }
 
+/* PDF Embed */
+.pdf-embed-container { width: 100%; height: 600px; }
+.pdf-embed-iframe { width: 100%; height: 100%; border: none; }
+
 /* Print */
 @media print { body { background: #fff; } .container { max-width: 100%; padding: 0; } .tab-pane { display: block !important; } .tab-nav { display: none; } }
 "#;

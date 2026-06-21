@@ -6,6 +6,7 @@ import { useProjectStore } from '../stores/project'
 import { renderHtml, exportHtml } from '../services/tauri'
 import { useRouter } from 'vue-router'
 import { save } from '@tauri-apps/plugin-dialog'
+import { readFile } from '@tauri-apps/plugin-fs'
 import { ElNotification } from 'element-plus'
 
 const inputStore = useInputStore()
@@ -20,14 +21,43 @@ const previewLoading = ref(false)
 
 const hasPatents = computed(() => inputStore.patents.length > 0)
 
-// 构建渲染配置
-function buildModuleConfig() {
-  return {
+// 构建渲染配置（含 PDF base64 数据）
+async function buildModuleConfig() {
+  const config: any = {
     mode: configStore.mode,
     theme_name: configStore.themeName || null,
     theme_description: configStore.themeDescription || null,
     patents: inputStore.patents,
   }
+
+  // 如果启用 PDF 内嵌，读取 PDF 文件转 base64
+  if (embedPdf.value) {
+    const pdfDataMap: Record<string, string> = {}
+    for (const patent of inputStore.patents) {
+      if (patent.pdfFilePath) {
+        try {
+          const data = await readFile(patent.pdfFilePath)
+          const base64 = arrayBufferToBase64(data)
+          const patentId = patent.publicationNumber || patent.applicationNumber || 'unknown'
+          pdfDataMap[patentId] = base64
+        } catch (e) {
+          console.warn('读取 PDF 失败:', patent.pdfFilePath, e)
+        }
+      }
+    }
+    config.pdf_base64_map = pdfDataMap
+  }
+
+  return config
+}
+
+function arrayBufferToBase64(buffer: Uint8Array): string {
+  let binary = ''
+  const len = buffer.byteLength
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(buffer[i])
+  }
+  return btoa(binary)
 }
 
 // 预览 HTML
@@ -35,9 +65,10 @@ async function handlePreview() {
   if (!hasPatents.value) return
   previewLoading.value = true
   try {
+    const config = await buildModuleConfig()
     const html = await renderHtml({
       projectId: projectStore.projectId,
-      moduleConfig: buildModuleConfig(),
+      moduleConfig: config,
       embedPdf: embedPdf.value,
     })
     previewHtml.value = html
@@ -58,10 +89,11 @@ async function handleExport() {
 
     if (filePath) {
       exporting.value = true
+      const config = await buildModuleConfig()
       await exportHtml({
         projectId: projectStore.projectId,
         outputPath: filePath,
-        moduleConfig: buildModuleConfig(),
+        moduleConfig: config,
         embedPdf: embedPdf.value,
       })
       exporting.value = false

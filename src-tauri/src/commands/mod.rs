@@ -650,8 +650,20 @@ pub async fn render_html(
     let theme_description = module_config.get("theme_description")
         .and_then(|v| v.as_str());
 
+    // 提取 PDF base64 数据
+    let mut pdf_base64_map: HashMap<String, String> = HashMap::new();
+    if embed_pdf {
+        if let Some(map) = module_config.get("pdf_base64_map").and_then(|v| v.as_object()) {
+            for (k, v) in map {
+                if let Some(s) = v.as_str() {
+                    pdf_base64_map.insert(k.clone(), s.to_string());
+                }
+            }
+        }
+    }
+
     let render_data = crate::render::template::build_render_data(
-        &patents, &modules, mode, theme_name, theme_description,
+        &patents, &modules, mode, theme_name, theme_description, &pdf_base64_map,
     );
 
     // 6. 注入内联 CSS

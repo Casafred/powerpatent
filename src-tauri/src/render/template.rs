@@ -53,6 +53,7 @@ pub fn build_render_data(
     mode: &str,
     theme_name: Option<&str>,
     theme_description: Option<&str>,
+    pdf_base64_map: &HashMap<String, String>,
 ) -> serde_json::Value {
     let mut data = serde_json::Map::new();
 
@@ -76,7 +77,8 @@ pub fn build_render_data(
             .or_else(|| patent_data.get("applicationNumber"))
             .or_else(|| patent_data.get("application_number"))
             .and_then(|v| v.as_str())
-            .unwrap_or("unknown");
+            .unwrap_or("unknown")
+            .to_string(); // clone to avoid borrow conflict
 
         let mut module_outputs = serde_json::Map::new();
         for (key, value) in modules {
@@ -87,6 +89,14 @@ pub fn build_render_data(
         }
         patent_data.insert("modules".to_string(), serde_json::Value::Object(module_outputs));
         patent_data.insert("index".to_string(), serde_json::Value::Number((i + 1).into()));
+
+        // 添加 PDF base64 数据（用于内嵌）
+        if let Some(b64) = pdf_base64_map.get(&patent_id) {
+            patent_data.insert("pdf_base64".to_string(), serde_json::Value::String(b64.clone()));
+            patent_data.insert("has_pdf".to_string(), serde_json::Value::Bool(true));
+        } else {
+            patent_data.insert("has_pdf".to_string(), serde_json::Value::Bool(false));
+        }
 
         patent_list.push(serde_json::Value::Object(patent_data));
     }
@@ -134,6 +144,7 @@ const SINGLE_PATENT_TEMPLATE: &str = r##"<!DOCTYPE html>
 
     <div class='tab-container'>
       <div class='tab-nav'>
+        {{#if has_pdf}}<button class='tab-btn' data-tab='PDF'>PDF 原文</button>{{/if}}
         {{#if modules.M1}}<button class='tab-btn active' data-tab='M1'>M1 基本信息</button>{{/if}}
         {{#if modules.M2}}<button class='tab-btn' data-tab='M2'>M2 法律状态</button>{{/if}}
         {{#if modules.M3}}<button class='tab-btn' data-tab='M3'>M3 同族保护</button>{{/if}}
@@ -144,6 +155,7 @@ const SINGLE_PATENT_TEMPLATE: &str = r##"<!DOCTYPE html>
         {{#if modules.M8}}<button class='tab-btn' data-tab='M8'>M8 同族权要差异</button>{{/if}}
       </div>
       <div class='tab-content'>
+        {{#if has_pdf}}<div class='tab-pane' id='tab-PDF'><div class='pdf-embed-container'><iframe src='data:application/pdf;base64,{{pdf_base64}}' class='pdf-embed-iframe' /></div></div>{{/if}}
         {{#if modules.M1}}<div class='tab-pane active' id='tab-M1'>{{{modules.M1}}}</div>{{/if}}
         {{#if modules.M2}}<div class='tab-pane' id='tab-M2'>{{{modules.M2}}}</div>{{/if}}
         {{#if modules.M3}}<div class='tab-pane' id='tab-M3'>{{{modules.M3}}}</div>{{/if}}
@@ -221,6 +233,7 @@ const MULTI_PATENT_TEMPLATE: &str = r##"<!DOCTYPE html>
 
     <div class='tab-container'>
       <div class='tab-nav'>
+        {{#if has_pdf}}<button class='tab-btn' data-tab='PDF'>PDF 原文</button>{{/if}}
         {{#if modules.M1}}<button class='tab-btn active' data-tab='M1'>M1 基本信息</button>{{/if}}
         {{#if modules.M4}}<button class='tab-btn' data-tab='M4'>M4 一句话概要</button>{{/if}}
         {{#if modules.M5}}<button class='tab-btn' data-tab='M5'>M5 权利要求</button>{{/if}}
@@ -228,6 +241,7 @@ const MULTI_PATENT_TEMPLATE: &str = r##"<!DOCTYPE html>
         {{#if modules.M3}}<button class='tab-btn' data-tab='M3'>M3 同族保护</button>{{/if}}
       </div>
       <div class='tab-content'>
+        {{#if has_pdf}}<div class='tab-pane' id='tab-PDF'><div class='pdf-embed-container'><iframe src='data:application/pdf;base64,{{pdf_base64}}' class='pdf-embed-iframe' /></div></div>{{/if}}
         {{#if modules.M1}}<div class='tab-pane active' id='tab-M1'>{{{modules.M1}}}</div>{{/if}}
         {{#if modules.M4}}<div class='tab-pane' id='tab-M4'>{{{modules.M4}}}</div>{{/if}}
         {{#if modules.M5}}<div class='tab-pane' id='tab-M5'>{{{modules.M5}}}</div>{{/if}}
