@@ -110,22 +110,22 @@ function isFigureImage(fig: any): boolean {
       <div class="e2-figures">
         <div v-for="(fig, idx) in (output.figures || [])" :key="idx" class="figure-card">
           <div class="figure-header">
-            <span class="figure-num">{{ fig.figure_number || fig.figureNumber || `图${idx + 1}` }}</span>
+            <span class="figure-num">{{ fig.figure_number || fig.figureNumber || `图${Number(idx) + 1}` }}</span>
             <span class="figure-title">{{ fig.title || '' }}</span>
           </div>
           <div v-if="isFigureImage(fig)" class="figure-image-container">
-            <img :src="`data:image/png;base64,${fig.imageBase64}`" :alt="fig.figure_number || `图${idx + 1}`" class="figure-image" />
+            <img :src="`data:image/png;base64,${fig.imageBase64}`" :alt="fig.figure_number || `图${Number(idx) + 1}`" class="figure-image" />
           </div>
           <div v-if="fig.description" class="figure-desc">{{ fig.description }}</div>
         </div>
         <!-- OCR 来源的图片 -->
         <div v-for="(fig, idx) in (output.ocr_figures || [])" :key="`ocr-${idx}`" class="figure-card ocr-figure">
           <div class="figure-header">
-            <span class="figure-num">{{ fig.figureNum || fig.figure_num || `图${idx + 1}` }}</span>
+            <span class="figure-num">{{ fig.figureNum || fig.figure_num || `图${Number(idx) + 1}` }}</span>
             <span class="figure-title">OCR 识别附图（第{{ fig.pageNumber || fig.page_number }}页）</span>
           </div>
           <div v-if="fig.imageBase64 || fig.image_base64" class="figure-image-container">
-            <img :src="`data:image/png;base64,${fig.imageBase64 || fig.image_base64}`" :alt="fig.figureNum || `图${idx + 1}`" class="figure-image" />
+            <img :src="`data:image/png;base64,${fig.imageBase64 || fig.image_base64}`" :alt="fig.figureNum || `图${Number(idx) + 1}`" class="figure-image" />
           </div>
         </div>
       </div>
