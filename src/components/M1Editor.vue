@@ -17,9 +17,9 @@ watch(() => props.modelValue, (val) => {
   if (!val) return
   const fields: (keyof PatentData)[] = [
     'publicationNumber', 'grantNumber', 'applicationNumber',
-    'applicant', 'inventor', 'title',
+    'applicant', 'inventor', 'title', 'titleOriginal',
     'filingDate', 'priorityDate', 'publicationDate', 'grantDate',
-    'legalStatus', 'ipc', 'cpc', 'abstractText',
+    'legalStatus', 'ipc', 'cpc', 'abstractText', 'abstractTextOriginal',
   ]
   for (const f of fields) {
     if ((form as any)[f] !== val[f]) {
@@ -32,9 +32,9 @@ function onInput() {
   const updated = { ...props.modelValue }
   const fields: (keyof PatentData)[] = [
     'publicationNumber', 'grantNumber', 'applicationNumber',
-    'applicant', 'inventor', 'title',
+    'applicant', 'inventor', 'title', 'titleOriginal',
     'filingDate', 'priorityDate', 'publicationDate', 'grantDate',
-    'legalStatus', 'ipc', 'cpc', 'abstractText',
+    'legalStatus', 'ipc', 'cpc', 'abstractText', 'abstractTextOriginal',
   ]
   for (const f of fields) {
     const v = (form as any)[f]
@@ -61,7 +61,8 @@ const fieldGroups: { title: string; fields: FieldDef[] }[] = [
       { key: 'publicationNumber', label: '公开号/专利号' },
       { key: 'grantNumber', label: '授权号' },
       { key: 'applicationNumber', label: '申请号' },
-      { key: 'title', label: '发明名称', span: 2 },
+      { key: 'title', label: '发明名称（中文）', span: 2 },
+      { key: 'titleOriginal', label: '发明名称（原文）', span: 2 },
       { key: 'applicant', label: '申请人' },
       { key: 'inventor', label: '发明人' },
     ],
@@ -81,7 +82,8 @@ const fieldGroups: { title: string; fields: FieldDef[] }[] = [
       { key: 'legalStatus', label: '法律状态' },
       { key: 'ipc', label: 'IPC分类号' },
       { key: 'cpc', label: 'CPC分类号' },
-      { key: 'abstractText', label: '摘要', span: 2, type: 'textarea' },
+      { key: 'abstractText', label: '摘要（中文）', span: 2, type: 'textarea' },
+      { key: 'abstractTextOriginal', label: '摘要（原文）', span: 2, type: 'textarea' },
     ],
   },
 ]

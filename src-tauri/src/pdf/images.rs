@@ -3,11 +3,12 @@ use anyhow::Result;
 // PDF 图像抽取 - TODO: 需要集成 mupdf 或 pdf-render crate
 // 当前阶段先返回空结果，后续 Phase 2.5 实现
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct FigureImage {
     pub figure_num: String,
     pub image_base64: String,
     pub page_number: u32,
+    pub source: String,  // "ocr" or "pdf_extract"
 }
 
 /// 从 PDF 抽取图像（占位实现）
