@@ -21,11 +21,22 @@ pub struct PatentData {
     pub description_text: Option<String>,
     pub family_members: Option<Vec<FamilyMember>>,
     #[serde(default)]
+    pub figures: Vec<FigureImage>,
+    #[serde(default)]
     pub source: InputSource,
     #[serde(default)]
     pub needs_ocr: bool,
     #[serde(default)]
     pub pdf_file_path: Option<String>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FigureImage {
+    pub figure_num: String,
+    pub image_base64: String,
+    pub page_number: u32,
+    pub source: String,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]

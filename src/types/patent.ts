@@ -13,7 +13,9 @@ export interface PatentData {
   ipc?: string
   cpc?: string
   title?: string
+  titleOriginal?: string
   abstractText?: string
+  abstractTextOriginal?: string
   claimsText?: string
   descriptionText?: string
   familyMembers?: FamilyMember[]
@@ -38,6 +40,7 @@ export interface FigureImage {
   referencedClaims: number[]
   referencedEmbodiments: number[]
   pageNumber: number
+  source: string
   sourceBBox: BBox
   labelAnnotations: LabelAnnotation[]
 }

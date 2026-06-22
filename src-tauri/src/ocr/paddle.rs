@@ -11,12 +11,32 @@ const PADDLE_OCR_V2_MODEL: &str = "PaddleOCR-VL-1.6";
 const PADDLE_OCR_V2_POLL_INTERVAL_SECS: u64 = 5;
 const PADDLE_OCR_V2_POLL_TIMEOUT_SECS: u64 = 300;
 
+/// OCR 图片块（从 PaddleOCR 结果中提取的图片信息）
+#[derive(Debug, Serialize, Clone)]
+pub struct OcrImageBlock {
+    pub page_number: usize,
+    pub label: String,
+    pub content_url: String,
+    pub bbox: Option<Vec<f64>>,
+}
+
+/// OCR 图片 Base64 数据（下载后的图片）
+#[derive(Debug, Serialize, Clone)]
+pub struct OcrImageBase64 {
+    pub page_number: usize,
+    pub label: String,
+    pub image_base64: String,
+    pub bbox: Option<Vec<f64>>,
+}
+
 /// OCR 结果
 #[derive(Debug, Serialize, Clone)]
 pub struct OcrResult {
     pub text: String,
     pub markdown: Option<String>,
     pub layout: Option<serde_json::Value>,
+    #[serde(default)]
+    pub images_base64: Vec<OcrImageBase64>,
 }
 
 /// PaddleOCR-VL 在线 API 客户端
@@ -193,6 +213,7 @@ impl PaddleOcrClient {
         // 解析 JSONL
         let mut all_markdown = Vec::new();
         let mut all_text = Vec::new();
+        let mut all_images: Vec<OcrImageBlock> = Vec::new();
 
         for line in jsonl_text.lines() {
             let line = line.trim();
@@ -212,7 +233,9 @@ impl PaddleOcrClient {
                 .cloned()
                 .unwrap_or_default();
 
-            for page_result in &results {
+            for (page_idx, page_result) in results.iter().enumerate() {
+                let page_number = page_idx + 1;
+
                 // 提取 markdown
                 if let Some(md_text) = page_result
                     .get("markdown")
@@ -246,8 +269,59 @@ impl PaddleOcrClient {
 
                     let is_text_label = ["text", "title", "table", "formula"].contains(&label.as_str());
                     if !content.is_empty() && is_text_label {
-                        all_text.push(content);
+                        all_text.push(content.clone());
                     }
+
+                    // 捕获图片块
+                    let is_image_label = ["image", "figure"].contains(&label.as_str());
+                    if is_image_label && !content.is_empty() {
+                        // 提取 bounding box
+                        let bbox = block
+                            .get("block_bbox")
+                            .or_else(|| block.get("bbox"))
+                            .and_then(|v| v.as_array())
+                            .map(|arr| arr.iter().filter_map(|v| v.as_f64()).collect::<Vec<f64>>());
+
+                        all_images.push(OcrImageBlock {
+                            page_number,
+                            label: label.clone(),
+                            content_url: content.clone(),
+                            bbox,
+                        });
+                    }
+                }
+            }
+        }
+
+        // 下载图片并转换为 base64
+        let mut images_base64 = Vec::new();
+        for img_block in &all_images {
+            match self.client.get(&img_block.content_url).timeout(Duration::from_secs(30)).send().await {
+                Ok(resp) => {
+                    if resp.status().is_success() {
+                        match resp.bytes().await {
+                            Ok(bytes) => {
+                                let b64 = base64::Engine::encode(
+                                    &base64::engine::general_purpose::STANDARD,
+                                    &bytes,
+                                );
+                                images_base64.push(OcrImageBase64 {
+                                    page_number: img_block.page_number,
+                                    label: img_block.label.clone(),
+                                    image_base64: b64,
+                                    bbox: img_block.bbox.clone(),
+                                });
+                            }
+                            Err(e) => {
+                                log::warn!("下载图片字节失败 (page {}): {}", img_block.page_number, e);
+                            }
+                        }
+                    } else {
+                        log::warn!("下载图片 HTTP 错误 (page {}): {}", img_block.page_number, resp.status());
+                    }
+                }
+                Err(e) => {
+                    log::warn!("下载图片请求失败 (page {}): {}", img_block.page_number, e);
                 }
             }
         }
@@ -255,12 +329,18 @@ impl PaddleOcrClient {
         let markdown = all_markdown.join("\n\n---\n\n");
         let text = all_text.join("\n");
 
-        log::info!("PaddleOCR 结果: markdown={} chars, text={} chars", markdown.len(), text.len());
+        log::info!(
+            "PaddleOCR 结果: markdown={} chars, text={} chars, images={}",
+            markdown.len(),
+            text.len(),
+            images_base64.len()
+        );
 
         Ok(OcrResult {
             text,
             markdown: if markdown.is_empty() { None } else { Some(markdown) },
             layout: None,
+            images_base64,
         })
     }
 }

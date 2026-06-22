@@ -18,6 +18,8 @@ output_schema:
             type: integer
           claim_text:
             type: string
+          claim_text_original:
+            type: string
           core_features:
             type: array
             items:
@@ -35,6 +37,8 @@ output_schema:
             type: integer
           additional_limitation:
             type: string
+          additional_limitation_original:
+            type: string
           scope_narrowing:
             type: string
 prompt_template: |
@@ -50,24 +54,28 @@ prompt_template: |
 
   ## 输出要求
 
-  请严格按以下 JSON 格式输出：
+  请严格按以下 JSON 格式输出。
+
+  **重要：所有分析解读内容必须以中文输出。如果权利要求原文为外文，请在 claim_text / additional_limitation 字段提供中文翻译，同时在 claim_text_original / additional_limitation_original 字段保留原文。如果原文为中文，则 _original 字段与对应字段内容相同。**
 
   ```json
   {
     "independent_claims": [
       {
         "claim_number": 1,
-        "claim_text": "独立权利要求原文",
+        "claim_text": "独立权利要求中文翻译",
+        "claim_text_original": "独立权利要求原文",
         "core_features": ["必要技术特征1", "必要技术特征2"],
-        "scope_summary": "该独立权利要求的保护范围概述"
+        "scope_summary": "该独立权利要求的保护范围概述（中文）"
       }
     ],
     "dependent_claims": [
       {
         "claim_number": 2,
         "depends_on": 1,
-        "additional_limitation": "附加技术特征描述",
-        "scope_narrowing": "该从属权利要求对保护范围的进一步限定"
+        "additional_limitation": "附加技术特征中文翻译",
+        "additional_limitation_original": "附加技术特征原文",
+        "scope_narrowing": "该从属权利要求对保护范围的进一步限定（中文）"
       }
     ]
   }

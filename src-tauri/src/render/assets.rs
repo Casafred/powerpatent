@@ -108,11 +108,20 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Helvetica 
 .claim-card.dependent { border-left-color: #e6a23c; background: #fffbf0; }
 .claim-num { font-weight: 700; color: #409eff; margin-bottom: 4px; font-size: 13px; }
 .claim-text { font-size: 13px; color: #606266; margin-bottom: 8px; line-height: 1.6; }
+.claim-bilingual { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 8px; }
+.claim-translation { padding: 10px 14px; background: #f0f9eb; border-radius: 6px; border: 1px solid #e1f3d8; }
+.claim-original { padding: 10px 14px; background: #f5f7fa; border-radius: 6px; border: 1px solid #ebeef5; }
+.claim-bilingual .claim-label { font-size: 11px; color: #909399; font-weight: 600; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+.claim-bilingual .claim-text { margin-bottom: 0; }
 .features { margin: 8px 0; }
 .features strong { font-size: 12px; color: #909399; }
 .features ul { padding-left: 20px; font-size: 13px; margin-top: 4px; }
 .scope-text { font-size: 12px; color: #909399; font-style: italic; }
 .scope-narrowing { font-size: 12px; color: #e6a23c; margin-top: 4px; padding: 4px 8px; background: #fffbf0; border-radius: 4px; border-left: 2px solid #e6a23c; }
+
+/* Original text display for M1 */
+.original-text { font-size: 12px; color: #909399; }
+.original-block { font-size: 12px; color: #909399; margin-top: 4px; padding: 6px 10px; background: #f5f7fa; border-radius: 4px; border: 1px solid #ebeef5; white-space: pre-wrap; line-height: 1.5; }
 
 /* Embodiments */
 .embodiments-section { display: flex; flex-direction: column; gap: 12px; }
@@ -160,6 +169,9 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Helvetica 
 .figure-title { font-size: 15px; font-weight: 600; color: #303133; }
 .figure-desc { font-size: 13px; color: #606266; line-height: 1.6; margin-bottom: 8px; }
 .figure-summary { font-size: 12px; color: #909399; font-style: italic; margin-top: 8px; padding: 6px 10px; background: #f5f7fa; border-radius: 4px; }
+.figure-image { max-width: 100%; border: 1px solid #ebeef5; border-radius: 6px; margin: 8px 0; background: #fff; }
+.figure-image-container { text-align: center; margin: 8px 0; }
+.figure-image-container img { max-width: 100%; max-height: 400px; border: 1px solid #ebeef5; border-radius: 6px; }
 .element-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
 .element-table th, .element-table td { padding: 6px 10px; border: 1px solid #ebeef5; font-size: 12px; }
 .element-table th { background: #f5f7fa; font-weight: 500; text-align: left; }

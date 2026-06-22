@@ -3,7 +3,7 @@ pub mod generate;
 pub mod cache;
 pub mod export;
 
-use crate::types::patent::{InputSource, PatentData};
+use crate::types::patent::{InputSource, PatentData, FigureImage};
 use crate::ai::client::AIClient;
 use crate::ai::models::ChatMessage;
 use crate::ai::provider::config_from_json;
@@ -154,7 +154,7 @@ async fn process_pdf(path: &str) -> Result<PatentData, String> {
     // 2. 如果文本内容太少（扫描件），自动调用 PaddleOCR
     let needs_ocr = text.trim().len() < 100;
 
-    let (final_text, ocr_used) = if needs_ocr {
+    let (final_text, ocr_used, ocr_images) = if needs_ocr {
         log::info!("PDF 文本不足 ({} chars)，自动调用 PaddleOCR", text.trim().len());
         match crate::ocr::ocr_pdf(path, &crate::ocr::OcrEngine::PaddleOcrVl, None).await {
             Ok(ocr_result) => {
@@ -163,16 +163,17 @@ async fn process_pdf(path: &str) -> Result<PatentData, String> {
                 } else {
                     ocr_result.text
                 };
-                log::info!("PaddleOCR 完成，获得 {} chars", ocr_text.len());
-                (ocr_text, true)
+                let images = ocr_result.images_base64;
+                log::info!("PaddleOCR 完成，获得 {} chars, {} 张图片", ocr_text.len(), images.len());
+                (ocr_text, true, images)
             }
             Err(e) => {
                 log::warn!("PaddleOCR 失败: {}，回退到原始文本", e);
-                (text, false)
+                (text, false, vec![])
             }
         }
     } else {
-        (text, false)
+        (text, false, vec![])
     };
 
     // 如果用了 OCR，重新提取元信息
@@ -181,6 +182,18 @@ async fn process_pdf(path: &str) -> Result<PatentData, String> {
     } else {
         meta.clone()
     };
+
+    // 将 OCR 图片转换为 FigureImage
+    let figures: Vec<FigureImage> = ocr_images
+        .iter()
+        .enumerate()
+        .map(|(idx, img)| FigureImage {
+            figure_num: format!("图{}", idx + 1),
+            image_base64: img.image_base64.clone(),
+            page_number: img.page_number as u32,
+            source: "ocr".to_string(),
+        })
+        .collect();
 
     Ok(PatentData {
         publication_number: final_meta.publication_number.or(meta.publication_number),
@@ -195,6 +208,7 @@ async fn process_pdf(path: &str) -> Result<PatentData, String> {
         source: InputSource::Pdf,
         needs_ocr: ocr_used,
         pdf_file_path: Some(path.to_string()),
+        figures,
         ..Default::default()
     })
 }
@@ -629,6 +643,53 @@ pub async fn render_html(
         modules.insert(key, serde_json::Value::String(rendered));
     }
 
+    // 2.5 将专利数据中的 OCR 图片注入到 E2 模块（如果有）
+    let patents_for_figures: Vec<serde_json::Value> = module_config.get("patents")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    for patent in &patents_for_figures {
+        let patent_id = patent.get("publicationNumber")
+            .or_else(|| patent.get("publication_number"))
+            .or_else(|| patent.get("applicationNumber"))
+            .or_else(|| patent.get("application_number"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_string();
+
+        let figures = patent.get("figures").and_then(|v| v.as_array());
+        if let Some(fig_arr) = figures {
+            if !fig_arr.is_empty() {
+                let e2_key = format!("{}_E2", patent_id);
+                // 如果 E2 模块已有 AI 输出，将 OCR 图片追加到数据中重新渲染
+                // 否则直接用 OCR 图片创建 E2 内容
+                let ocr_figures_json = serde_json::Value::Array(fig_arr.clone());
+
+                if modules.contains_key(&e2_key) {
+                    // E2 已有 AI 输出，需要将 ocr_figures 注入后重新渲染
+                    // 从缓存中重新获取原始 JSON
+                    let e2_output: serde_json::Value = entries.iter()
+                        .find(|e| e.patent_id == patent_id && e.module_id == "E2")
+                        .and_then(|e| serde_json::from_str(&e.output_json).ok())
+                        .unwrap_or(serde_json::json!({}));
+
+                    let mut e2_data = match e2_output.as_object() {
+                        Some(obj) => obj.clone(),
+                        None => serde_json::Map::new(),
+                    };
+                    e2_data.insert("ocr_figures".to_string(), ocr_figures_json);
+                    let rendered = render_e2(&serde_json::Value::Object(e2_data));
+                    modules.insert(e2_key, serde_json::Value::String(rendered));
+                } else {
+                    // 没有 AI 输出的 E2，直接用 OCR 图片渲染
+                    let e2_data = serde_json::json!({ "ocr_figures": ocr_figures_json });
+                    let rendered = render_e2(&e2_data);
+                    modules.insert(e2_key, serde_json::Value::String(rendered));
+                }
+            }
+        }
+    }
+
     // 3. 获取专利数据（从 module_config 中提取）
     let patents: Vec<serde_json::Value> = module_config.get("patents")
         .and_then(|v| v.as_array())
@@ -740,12 +801,6 @@ fn render_m1(data: &serde_json::Value) -> String {
         ("application_number", "申请号"),
         ("applicant", "申请人"),
         ("inventor", "发明人"),
-        ("title", "发明名称"),
-        ("filing_date", "申请日"),
-        ("publication_date", "公开日"),
-        ("grant_date", "授权日"),
-        ("ipc", "IPC分类号"),
-        ("cpc", "CPC分类号"),
     ];
     let mut rows = String::new();
     for (key, label) in &fields {
@@ -755,11 +810,50 @@ fn render_m1(data: &serde_json::Value) -> String {
             }
         }
     }
-    // abstract
-    if let Some(v) = data.get("abstract_text").or_else(|| data.get("abstractText")).and_then(|v| v.as_str()) {
-        if !v.is_empty() {
-            rows.push_str(&format!("<tr><th>摘要</th><td class='abstract-text'>{}</td></tr>", escape_html(v)));
+    // title: show Chinese + original side by side if different
+    let title_cn = data.get("title").and_then(|v| v.as_str()).unwrap_or("");
+    let title_orig = data.get("title_original").or_else(|| data.get("titleOriginal")).and_then(|v| v.as_str()).unwrap_or("");
+    if !title_cn.is_empty() {
+        let display = if !title_orig.is_empty() && title_orig != title_cn {
+            format!("{}<br><span class='original-text'>原文：{}</span>", escape_html(title_cn), escape_html(title_orig))
+        } else {
+            escape_html(title_cn)
+        };
+        rows.push_str(&format!("<tr><th>发明名称</th><td>{}</td></tr>", display));
+    }
+    let date_fields = [
+        ("filing_date", "申请日"),
+        ("publication_date", "公开日"),
+        ("grant_date", "授权日"),
+    ];
+    for (key, label) in &date_fields {
+        if let Some(v) = data.get(key).and_then(|v| v.as_str()) {
+            if !v.is_empty() {
+                rows.push_str(&format!("<tr><th>{}</th><td>{}</td></tr>", label, escape_html(v)));
+            }
         }
+    }
+    let class_fields = [
+        ("ipc", "IPC分类号"),
+        ("cpc", "CPC分类号"),
+    ];
+    for (key, label) in &class_fields {
+        if let Some(v) = data.get(key).and_then(|v| v.as_str()) {
+            if !v.is_empty() {
+                rows.push_str(&format!("<tr><th>{}</th><td>{}</td></tr>", label, escape_html(v)));
+            }
+        }
+    }
+    // abstract: show Chinese + original side by side if different
+    let abstract_cn = data.get("abstract_text").or_else(|| data.get("abstractText")).and_then(|v| v.as_str()).unwrap_or("");
+    let abstract_orig = data.get("abstract_text_original").or_else(|| data.get("abstractTextOriginal")).and_then(|v| v.as_str()).unwrap_or("");
+    if !abstract_cn.is_empty() {
+        let display = if !abstract_orig.is_empty() && abstract_orig != abstract_cn {
+            format!("{}<br><span class='original-text'>原文：</span><div class='original-block'>{}</div>", escape_html(abstract_cn), escape_html(abstract_orig))
+        } else {
+            escape_html(abstract_cn)
+        };
+        rows.push_str(&format!("<tr><th>摘要</th><td class='abstract-text'>{}</td></tr>", display));
     }
     if rows.is_empty() {
         json_to_generic_html(data)
@@ -855,8 +949,18 @@ fn render_m5(data: &serde_json::Value) -> String {
         for c in claims {
             let num = value_as_str(c, "claim_number", "claimNumber");
             let text = value_as_str(c, "claim_text", "claimText");
+            let text_original = value_as_str(c, "claim_text_original", "claimTextOriginal");
             let scope = value_as_str(c, "scope_summary", "scopeSummary");
-            html.push_str(&format!("<div class='claim-card'><div class='claim-num'>权利要求 {}</div><p class='claim-text'>{}</p>", escape_html(&num), escape_html(&text)));
+            html.push_str(&format!("<div class='claim-card'><div class='claim-num'>权利要求 {}</div>", escape_html(&num)));
+            // Show translation and original side by side
+            if !text_original.is_empty() && text_original != text {
+                html.push_str(&format!(
+                    "<div class='claim-bilingual'><div class='claim-translation'><div class='claim-label'>中文翻译</div><p class='claim-text'>{}</p></div><div class='claim-original'><div class='claim-label'>原文</div><p class='claim-text'>{}</p></div></div>",
+                    escape_html(&text), escape_html(&text_original)
+                ));
+            } else {
+                html.push_str(&format!("<p class='claim-text'>{}</p>", escape_html(&text)));
+            }
             if let Some(features) = c.get("core_features").or_else(|| c.get("coreFeatures")).and_then(|v| v.as_array()) {
                 html.push_str("<div class='features'><strong>必要技术特征：</strong><ul>");
                 for f in features {
@@ -876,9 +980,19 @@ fn render_m5(data: &serde_json::Value) -> String {
             let num = value_as_str(c, "claim_number", "claimNumber");
             let dep = value_as_str(c, "depends_on", "dependsOn");
             let lim = value_as_str(c, "additional_limitation", "additionalLimitation");
+            let lim_original = value_as_str(c, "additional_limitation_original", "additionalLimitationOriginal");
             let narrowing = value_as_str(c, "scope_narrowing", "scopeNarrowing");
-            html.push_str(&format!("<div class='claim-card dependent'><div class='claim-num'>权利要求 {}（引用权利要求 {}）</div><p class='claim-text'>{}</p>",
-                escape_html(&num), escape_html(&dep), escape_html(&lim)));
+            html.push_str(&format!("<div class='claim-card dependent'><div class='claim-num'>权利要求 {}（引用权利要求 {}）</div>",
+                escape_html(&num), escape_html(&dep)));
+            // Show translation and original side by side
+            if !lim_original.is_empty() && lim_original != lim {
+                html.push_str(&format!(
+                    "<div class='claim-bilingual'><div class='claim-translation'><div class='claim-label'>中文翻译</div><p class='claim-text'>{}</p></div><div class='claim-original'><div class='claim-label'>原文</div><p class='claim-text'>{}</p></div></div>",
+                    escape_html(&lim), escape_html(&lim_original)
+                ));
+            } else {
+                html.push_str(&format!("<p class='claim-text'>{}</p>", escape_html(&lim)));
+            }
             if !narrowing.is_empty() {
                 html.push_str(&format!("<p class='scope-narrowing'>范围缩小：{}</p>", escape_html(&narrowing)));
             }
@@ -970,6 +1084,20 @@ fn render_e2(data: &serde_json::Value) -> String {
                 "<div class='figure-card'><div class='figure-header'><span class='figure-num'>{}</span><span class='figure-title'>{}</span></div>",
                 escape_html(fig_num), escape_html(title)
             ));
+
+            // 如果有 image_base64 字段，渲染图片
+            if let Some(image_b64) = fig.get("image_base64")
+                .or_else(|| fig.get("imageBase64"))
+                .and_then(|v| v.as_str())
+            {
+                if !image_b64.is_empty() {
+                    html.push_str(&format!(
+                        "<div class='figure-image-container'><img src='data:image/png;base64,{}' alt='{}' class='figure-image' /></div>",
+                        image_b64, escape_html(fig_num)
+                    ));
+                }
+            }
+
             if !desc.is_empty() {
                 html.push_str(&format!("<p class='figure-desc'>{}</p>", escape_html(desc)));
             }
@@ -997,6 +1125,26 @@ fn render_e2(data: &serde_json::Value) -> String {
             html.push_str("</div>");
         }
     }
+
+    // 追加来自 OCR 但不在 AI 输出中的图片
+    if let Some(ocr_figures) = data.get("ocr_figures").and_then(|v| v.as_array()) {
+        for fig in ocr_figures {
+            let fig_num = fig.get("figure_num")
+                .or_else(|| fig.get("figureNum"))
+                .and_then(|v| v.as_str()).unwrap_or("");
+            let image_b64 = fig.get("image_base64")
+                .or_else(|| fig.get("imageBase64"))
+                .and_then(|v| v.as_str()).unwrap_or("");
+
+            if !image_b64.is_empty() {
+                html.push_str(&format!(
+                    "<div class='figure-card'><div class='figure-header'><span class='figure-num'>{}</span></div><div class='figure-image-container'><img src='data:image/png;base64,{}' alt='{}' class='figure-image' /></div></div>",
+                    escape_html(fig_num), image_b64, escape_html(fig_num)
+                ));
+            }
+        }
+    }
+
     if html == "<div class='figures-section'>" {
         // 没有附图数据，使用通用渲染
         return json_to_generic_html(data);

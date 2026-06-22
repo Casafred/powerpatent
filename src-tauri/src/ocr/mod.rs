@@ -17,6 +17,7 @@ pub struct UnifiedOcrResult {
     pub text: String,
     pub markdown: Option<String>,
     pub layout: Option<serde_json::Value>,
+    pub images_base64: Vec<crate::ocr::paddle::OcrImageBase64>,
     pub engine: String,
 }
 
@@ -29,6 +30,7 @@ pub async fn ocr_pdf(pdf_path: &str, engine: &OcrEngine, glm_config: Option<GlmO
                 text: result.text,
                 markdown: result.markdown,
                 layout: result.layout,
+                images_base64: result.images_base64,
                 engine: "paddle_ocr_vl".to_string(),
             })
         }
@@ -42,6 +44,7 @@ pub async fn ocr_pdf(pdf_path: &str, engine: &OcrEngine, glm_config: Option<GlmO
                 text: result.text,
                 markdown: result.markdown,
                 layout: None,
+                images_base64: vec![],
                 engine: "glm_ocr".to_string(),
             })
         }
